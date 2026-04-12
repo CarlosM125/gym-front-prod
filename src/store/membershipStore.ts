@@ -1,0 +1,97 @@
+import { create } from 'zustand';
+import { apiClient, ApiResponse } from '../api/client';
+
+export interface Membership {
+    id: number;
+    userId: number;
+    branchId: number;
+    startDate: string;
+    endDate: string;
+    status: string;
+    userFullName: string;
+    documentId: string;
+}
+
+export interface ChartData {
+    month: string;
+    signups: number;
+    revenue: number;
+}
+
+export interface MembershipPlan {
+    id: number;
+    name: string;
+    description: string;
+    priceAmount: number;
+    durationDays: number;
+    isPromotion: boolean;
+}
+
+interface MembershipState {
+    plans: MembershipPlan[];
+    expiringToday: Membership[];
+    historicalStats: ChartData[];
+    isLoading: boolean;
+    error: string | null;
+    fetchPlans: () => Promise<void>;
+    fetchExpiringToday: () => Promise<void>;
+    fetchHistoricalStats: (year: number) => Promise<void>;
+    renewMembership: (documentId: string, branchId: number, planId: number) => Promise<boolean>;
+}
+
+export const useMembershipStore = create<MembershipState>((set, get) => ({
+    plans: [],
+    expiringToday: [],
+    historicalStats: [],
+    isLoading: false,
+    error: null,
+
+    fetchPlans: async () => {
+        set({ isLoading: true });
+        try {
+            const res = await apiClient.get<ApiResponse<MembershipPlan[]>>('/memberships/plans');
+            if (res.data.success) set({ plans: res.data.data, isLoading: false });
+        } catch (e: any) { set({ error: e.message, isLoading: false }); }
+    },
+
+    fetchExpiringToday: async () => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await apiClient.get<ApiResponse<Membership[]>>('/memberships/expiring-today');
+            if (response.data.success) {
+                set({ expiringToday: response.data.data, isLoading: false });
+            }
+        } catch (error: any) {
+            set({ error: error.message, isLoading: false });
+        }
+    },
+
+    fetchHistoricalStats: async (year: number) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await apiClient.get<ApiResponse<ChartData[]>>(`/memberships/historical-stats?year=${year}`);
+            if (response.data.success) {
+                set({ historicalStats: response.data.data, isLoading: false });
+            }
+        } catch (error: any) {
+            set({ error: error.message, isLoading: false });
+        }
+    },
+
+    renewMembership: async (documentId: string, branchId: number, planId: number) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await apiClient.post<ApiResponse<Membership>>('/memberships/renew', { documentId, branchId, planId });
+            if (response.data.success) {
+                set({ isLoading: false });
+                return true;
+            } else {
+                set({ error: response.data.message, isLoading: false });
+                return false;
+            }
+        } catch (error: any) {
+            set({ error: error.response?.data?.message || 'Error renewing membership', isLoading: false });
+            return false;
+        }
+    }
+}));

@@ -1,0 +1,85 @@
+:root {
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: #f0f0f0;
+  background-color: #050505;
+
+  --primary-color: #d61c1c;
+  --secondary-color: #ff3b3b;
+  --bg-color: #0a0a0a;
+  --surface-color: rgba(30, 0, 0, 0.4);
+  --border-color: rgba(214, 28, 28, 0.3);
+  --text-primary: #f0f0f0;
+  --text-secondary: #ff7878;
+  
+  --glass-bg: rgba(10, 10, 10, 0.85);
+  --glass-border: rgba(214, 28, 28, 0.4);
+  --glass-shadow: 0 8px 32px 0 rgba(214, 28, 28, 0.1);
+  --glass-blur: blur(16px);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--bg-color);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(214, 28, 28, 0.15) 0, transparent 40%),
+    radial-gradient(at 100% 100%, rgba(214, 28, 28, 0.1) 0, transparent 40%);
+  color: var(--text-primary);
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+  background: -webkit-linear-gradient(120deg, #ff3b3b, #d61c1c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid var(--primary-color);
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 600;
+  font-family: inherit;
+  background-color: rgba(214, 28, 28, 0.2);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.25s;
+  backdrop-filter: var(--glass-blur);
+}
+
+button:hover {
+  background-color: var(--primary-color);
+  color: #fff;
+  border-color: var(--secondary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(214, 28, 28, 0.5);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: 16px;
+  padding: 2rem;
+  margin: 1rem;
+}
