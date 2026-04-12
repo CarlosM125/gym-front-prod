@@ -39,7 +39,7 @@ interface MembershipState {
     renewMembership: (documentId: string, branchId: number, planId: number) => Promise<boolean>;
 }
 
-export const useMembershipStore = create<MembershipState>((set, get) => ({
+export const useMembershipStore = create<MembershipState>((set) => ({
     plans: [],
     expiringToday: [],
     historicalStats: [],

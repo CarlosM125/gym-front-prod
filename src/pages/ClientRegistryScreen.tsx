@@ -45,7 +45,7 @@ export default function ClientRegistryScreen() {
             fullName, 
             email, 
             homeBranchId: Number(branchId),
-            // profileImageUrl: finalImageUrl // Model is prepared for this
+            profileImageUrl: finalImageUrl || undefined
         });
 
         if (success) {
