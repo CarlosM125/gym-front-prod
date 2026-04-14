@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useBranchStore } from '../store/branchStore';
 import { useMembershipStore } from '../store/membershipStore';
-import { useUserStore } from '../store/userStore';
-import { CreditCard, Tag } from 'lucide-react';
+import { useCustomerStore } from '../store/customerStore';
+import { Search } from 'lucide-react';
 
 export default function MembershipPOSScreen() {
     const { branches, fetchBranches } = useBranchStore();
     const { plans, fetchPlans, renewMembership, isLoading } = useMembershipStore();
-    const { fetchUserByDocId } = useUserStore();
+    const { fetchCustomerByDocId } = useCustomerStore();
 
     const [docId, setDocId] = useState("");
     const [branchId, setBranchId] = useState("");
@@ -21,11 +21,11 @@ export default function MembershipPOSScreen() {
 
     const handleDocIdBlur = async () => {
         if (!docId) return;
-        const user = await fetchUserByDocId(docId);
-        if (user) {
-            setClientName(user.fullName);
-            if (user.homeBranchId) {
-                setBranchId(user.homeBranchId.toString());
+        const customer = await fetchCustomerByDocId(docId);
+        if (customer) {
+            setClientName(customer.fullName);
+            if (customer.homeBranchId) {
+                setBranchId(customer.homeBranchId.toString());
             }
         } else {
             setClientName("No encontrado. Regístrelo primero.");
@@ -46,56 +46,77 @@ export default function MembershipPOSScreen() {
 
     return (
         <div>
-            <header className="page-header">
-                <h1>Punto de Venta (P.O.S)</h1>
-                <p className="subtitle">Cobro de mensualidades y promociones</p>
-            </header>
+            <h1 className="page-title">Renovar Membresía</h1>
+            <p className="page-subtitle">Busca y renueva membresías existentes</p>
 
-            <div className="glass-panel action-panel" style={{maxWidth: '600px', margin: 'auto'}}>
-                <h2 className="flex-title"><CreditCard /> Nueva Venta</h2>
-                
-                <div className="form-group vertical-flex">
-                    <input 
-                        className="glass-input full-w" 
-                        placeholder="Documento del Cliente (CC)" 
-                        value={docId} 
-                        onChange={e=>setDocId(e.target.value)} 
-                        onBlur={handleDocIdBlur}
-                    />
-
+            <div className="grid-cols-2">
+                <div>
+                    <h3 style={{marginBottom: '10px'}}>Buscar Cliente</h3>
+                    <div style={{position: 'relative', marginBottom: '16px'}}>
+                        <Search size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
+                        <input 
+                            className="form-input" 
+                            style={{paddingLeft: '40px', margin:0}}
+                            placeholder="Documento del Cliente (CC)" 
+                            value={docId} 
+                            onChange={e=>setDocId(e.target.value)} 
+                            onBlur={handleDocIdBlur}
+                        />
+                    </div>
                     {clientName && (
-                        <p style={{marginTop: '-0.5rem', marginBottom: '0.5rem', color: 'var(--primary-color)', fontSize: '0.9rem', textAlign: 'left'}}>
-                            Cliente Detectado: <b>{clientName}</b>
-                        </p>
-                    )}
-                    
-                    <select className="glass-input full-w" value={branchId} onChange={e=>setBranchId(e.target.value)}>
-                        <option value="" disabled>Seleccione Sucursal de Venta (Ingreso)</option>
-                        {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </select>
-
-                    <select className="glass-input full-w" value={planId} onChange={e=>setPlanId(e.target.value)}>
-                        <option value="" disabled>Seleccione Plan / Promoción</option>
-                        {plans.map(p => (
-                            <option key={p.id} value={p.id}>
-                                {p.name} - ${p.priceAmount} ({p.durationDays} días) {p.isPromotion ? '⭐ PROMO' : ''}
-                            </option>
-                        ))}
-                    </select>
-
-                    {selectedPlan && (
-                        <div style={{background: 'rgba(214, 28, 28, 0.1)', padding: '1rem', borderRadius: '8px', color: 'var(--primary-color)'}}>
-                            <h4 style={{margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap:'0.5rem'}}>
-                                <Tag size={16}/> Resumen de Compra
-                            </h4>
-                            <p style={{margin: 0}}>{selectedPlan.description}</p>
-                            <h2 style={{margin: '0.5rem 0 0 0'}}>TOTAL A COBRAR: ${selectedPlan.priceAmount}</h2>
+                        <div className="card" style={{display: 'flex', alignItems: 'center', borderColor: 'var(--primary-color)'}}>
+                            <img src="https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg" alt="user" className="client-avatar" />
+                            <div>
+                                <h4 style={{margin: '0 0 4px 0'}}>{clientName}</h4>
+                                <span className="text-muted" style={{fontSize: '0.85rem'}}>Seleccionado a Renovar</span>
+                            </div>
                         </div>
                     )}
+                </div>
 
-                    <button onClick={handlePayment} disabled={isLoading} style={{marginTop: '1rem'}}>
-                        {isLoading ? 'Autorizando...' : 'Confirmar Pago e Imprimir'}
-                    </button>
+                <div>
+                    <h3 style={{marginBottom: '10px'}}>Detalles de Renovación</h3>
+                    <div className="card" style={{minHeight: '200px'}}>
+                        {!clientName ? (
+                            <div style={{height: '100%', display:'flex', alignItems:'center', justifyContent:'center', color: 'var(--text-muted)'}}>
+                                Selecciona un cliente para renovar
+                            </div>
+                        ) : (
+                            <div>
+                                <div style={{marginBottom: '1rem'}}>
+                                    <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Sucursal de Pago</label>
+                                    <select className="form-input" value={branchId} onChange={e=>setBranchId(e.target.value)}>
+                                        <option value="" disabled>Seleccione Sucursal</option>
+                                        {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                    </select>
+                                </div>
+                                
+                                <div style={{marginBottom: '1.5rem'}}>
+                                    <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Plan de Membresía</label>
+                                    <select className="form-input" value={planId} onChange={e=>setPlanId(e.target.value)}>
+                                        <option value="" disabled>Seleccione Plan a cobrar</option>
+                                        {plans.map(p => (
+                                            <option key={p.id} value={p.id}>
+                                                {p.name} - ${p.priceAmount} ({p.durationDays} días)
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {selectedPlan && (
+                                    <div style={{paddingTop: '16px', borderTop: '1px solid var(--border-color)', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                                        <div>
+                                            <p style={{margin:0, fontSize:'0.9rem'}} className="text-muted">Total a Pagar</p>
+                                            <h2 style={{margin:0, color: 'var(--primary-color)'}}>${selectedPlan.priceAmount}</h2>
+                                        </div>
+                                        <button className="btn-primary" onClick={handlePayment} disabled={isLoading}>
+                                            {isLoading ? 'Cobrando...' : 'Renovar Ahora'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
