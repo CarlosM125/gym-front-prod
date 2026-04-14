@@ -14,8 +14,7 @@ export default function DashboardScreen() {
     }, [user, fetchExpiringToday]);
 
     const handleRenewClick = (documentId: string) => {
-        // Redirige al POS opcionalmente con el documento en state o querystring si configuráramos eso
-        navigate('/pos'); 
+        navigate(`/pos?doc=${documentId}`);
     };
 
     return (

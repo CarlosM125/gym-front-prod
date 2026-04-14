@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { useBranchStore } from '../store/branchStore';
 import { useMembershipStore } from '../store/membershipStore';
 import { useCustomerStore } from '../store/customerStore';
+import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 
 export default function MembershipPOSScreen() {
     const { branches, fetchBranches } = useBranchStore();
     const { plans, fetchPlans, renewMembership, isLoading } = useMembershipStore();
     const { fetchCustomerByDocId } = useCustomerStore();
+
+    const [searchParams] = useSearchParams();
 
     const [docId, setDocId] = useState("");
     const [branchId, setBranchId] = useState("");
@@ -18,6 +21,20 @@ export default function MembershipPOSScreen() {
         fetchBranches();
         fetchPlans();
     }, [fetchBranches, fetchPlans]);
+
+    // Pre-fill doc from dashboard shortcut
+    useEffect(() => {
+        const doc = searchParams.get('doc');
+        if (doc) {
+            setDocId(doc);
+            fetchCustomerByDocId(doc).then(customer => {
+                if (customer) {
+                    setClientName(customer.fullName);
+                    if (customer.homeBranchId) setBranchId(customer.homeBranchId.toString());
+                }
+            });
+        }
+    }, [searchParams, fetchCustomerByDocId]);
 
     const handleDocIdBlur = async () => {
         if (!docId) return;
