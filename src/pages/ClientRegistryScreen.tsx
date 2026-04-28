@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useCustomerStore } from '../store/customerStore';
 import { useBranchStore } from '../store/branchStore';
 import { useMembershipStore } from '../store/membershipStore';
-import { Upload, User, Mail, Calendar, DollarSign } from 'lucide-react';
+import { Upload, User, Mail, Calendar } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { useNavigate } from 'react-router-dom';
 
