@@ -15,7 +15,9 @@ export default function MembershipPOSScreen() {
     const [docId, setDocId] = useState("");
     const [branchId, setBranchId] = useState("");
     const [planId, setPlanId] = useState("");
-    const [clientName, setClientName] = useState("");
+    const [customerName, setCustomerName] = useState("");
+    const [amountPaid, setAmountPaid] = useState("");
+    const [transactionDate, setTransactionDate] = useState(() => new Date().toISOString().split('T')[0]);
 
     useEffect(() => { 
         fetchBranches();
@@ -29,7 +31,7 @@ export default function MembershipPOSScreen() {
             setDocId(doc);
             fetchCustomerByDocId(doc).then(customer => {
                 if (customer) {
-                    setClientName(customer.fullName);
+                    setCustomerName(customer.fullName);
                     if (customer.homeBranchId) setBranchId(customer.homeBranchId.toString());
                 }
             });
@@ -40,99 +42,131 @@ export default function MembershipPOSScreen() {
         if (!docId) return;
         const customer = await fetchCustomerByDocId(docId);
         if (customer) {
-            setClientName(customer.fullName);
+            setCustomerName(customer.fullName);
             if (customer.homeBranchId) {
                 setBranchId(customer.homeBranchId.toString());
             }
-        } else {
-            setClientName("No encontrado. Regístrelo primero.");
-            setBranchId("");
+        }
+    };
+
+    const handlePlanChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedId = e.target.value;
+        setPlanId(selectedId);
+        const plan = plans.find(p => p.id === Number(selectedId));
+        if (plan) {
+            setAmountPaid(plan.priceAmount.toString());
         }
     };
 
     const handlePayment = async () => {
-        if (!docId || !branchId || !planId) return alert("Rellene Documento, Sucursal de Venta, y Plan");
-        const success = await renewMembership(docId, Number(branchId), Number(planId));
+        if (!customerName || !amountPaid) return alert("El nombre y el monto son obligatorios");
+        
+        const payload = {
+            documentId: docId || undefined,
+            customerFullName: customerName,
+            branchId: branchId ? Number(branchId) : undefined,
+            planId: planId ? Number(planId) : undefined,
+            amountPaid: Number(amountPaid),
+            startDate: transactionDate
+        };
+
+        const success = await renewMembership(payload);
         if (success) {
-            alert("Pago Procesado Correctamente. Membresía Activada y Registrada en Contabilidad.");
-            setDocId(""); setPlanId(""); setClientName("");
+            alert("Membresía Registrada Correctamente.");
+            setDocId(""); 
+            setPlanId(""); 
+            setCustomerName(""); 
+            setAmountPaid("");
+            setBranchId("");
+            setTransactionDate(new Date().toISOString().split('T')[0]);
         }
     };
 
-    const selectedPlan = plans.find(p => p.id === Number(planId));
-
     return (
         <div>
-            <h1 className="page-title">Renovar Membresía</h1>
-            <p className="page-subtitle">Busca y renueva membresías existentes</p>
+            <h1 className="page-title">Registrar Membresía</h1>
+            <p className="page-subtitle">Crea o renueva membresías (solo Nombre y Monto requeridos)</p>
 
             <div className="grid-cols-2">
                 <div>
-                    <h3 style={{marginBottom: '10px'}}>Buscar Cliente</h3>
-                    <div style={{position: 'relative', marginBottom: '16px'}}>
-                        <Search size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
+                    <h3 style={{marginBottom: '10px'}}>Datos del Cliente</h3>
+                    <div style={{marginBottom: '16px'}}>
+                        <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Documento (Opcional)</label>
+                        <div style={{position: 'relative'}}>
+                            <Search size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
+                            <input 
+                                className="form-input" 
+                                style={{paddingLeft: '40px', margin:0}}
+                                placeholder="Buscar por Documento" 
+                                value={docId} 
+                                onChange={e=>setDocId(e.target.value)} 
+                                onBlur={handleDocIdBlur}
+                            />
+                        </div>
+                    </div>
+                    
+                    <div style={{marginBottom: '16px'}}>
+                        <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Nombre Completo *</label>
                         <input 
                             className="form-input" 
-                            style={{paddingLeft: '40px', margin:0}}
-                            placeholder="Documento del Cliente (CC)" 
-                            value={docId} 
-                            onChange={e=>setDocId(e.target.value)} 
-                            onBlur={handleDocIdBlur}
+                            placeholder="Nombre del cliente" 
+                            value={customerName} 
+                            onChange={e=>setCustomerName(e.target.value)} 
+                            required
                         />
                     </div>
-                    {clientName && (
-                        <div className="card" style={{display: 'flex', alignItems: 'center', borderColor: 'var(--primary-color)'}}>
-                            <img src="https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg" alt="user" className="client-avatar" />
-                            <div>
-                                <h4 style={{margin: '0 0 4px 0'}}>{clientName}</h4>
-                                <span className="text-muted" style={{fontSize: '0.85rem'}}>Seleccionado a Renovar</span>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 <div>
-                    <h3 style={{marginBottom: '10px'}}>Detalles de Renovación</h3>
+                    <h3 style={{marginBottom: '10px'}}>Detalles de Registro</h3>
                     <div className="card" style={{minHeight: '200px'}}>
-                        {!clientName ? (
-                            <div style={{height: '100%', display:'flex', alignItems:'center', justifyContent:'center', color: 'var(--text-muted)'}}>
-                                Selecciona un cliente para renovar
-                            </div>
-                        ) : (
-                            <div>
-                                <div style={{marginBottom: '1rem'}}>
-                                    <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Sucursal de Pago</label>
-                                    <select className="form-input" value={branchId} onChange={e=>setBranchId(e.target.value)}>
-                                        <option value="" disabled>Seleccione Sucursal</option>
-                                        {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                    </select>
-                                </div>
-                                
-                                <div style={{marginBottom: '1.5rem'}}>
-                                    <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Plan de Membresía</label>
-                                    <select className="form-input" value={planId} onChange={e=>setPlanId(e.target.value)}>
-                                        <option value="" disabled>Seleccione Plan a cobrar</option>
-                                        {plans.map(p => (
-                                            <option key={p.id} value={p.id}>
-                                                {p.name} - ${p.priceAmount} ({p.durationDays} días)
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                        <div style={{marginBottom: '1rem'}}>
+                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Fecha de Membresía</label>
+                            <input 
+                                type="date"
+                                className="form-input" 
+                                value={transactionDate} 
+                                onChange={e=>setTransactionDate(e.target.value)}
+                            />
+                        </div>
+                        
+                        <div style={{marginBottom: '1rem'}}>
+                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Sucursal (Opcional)</label>
+                            <select className="form-input" value={branchId} onChange={e=>setBranchId(e.target.value)}>
+                                <option value="">Sin Sucursal (Opcional)</option>
+                                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                            </select>
+                        </div>
+                        
+                        <div style={{marginBottom: '1rem'}}>
+                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Plan de Membresía (Opcional)</label>
+                            <select className="form-input" value={planId} onChange={handlePlanChange}>
+                                <option value="">Personalizado / Otro (Opcional)</option>
+                                {plans.map(p => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.name} - ${p.priceAmount} ({p.durationDays} días)
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                                {selectedPlan && (
-                                    <div style={{paddingTop: '16px', borderTop: '1px solid var(--border-color)', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                                        <div>
-                                            <p style={{margin:0, fontSize:'0.9rem'}} className="text-muted">Total a Pagar</p>
-                                            <h2 style={{margin:0, color: 'var(--primary-color)'}}>${selectedPlan.priceAmount}</h2>
-                                        </div>
-                                        <button className="btn-primary" onClick={handlePayment} disabled={isLoading}>
-                                            {isLoading ? 'Cobrando...' : 'Renovar Ahora'}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        <div style={{marginBottom: '1.5rem'}}>
+                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Monto a Pagar *</label>
+                            <input 
+                                type="number"
+                                className="form-input" 
+                                placeholder="Ingrese el valor" 
+                                value={amountPaid} 
+                                onChange={e=>setAmountPaid(e.target.value)}
+                                required
+                            />
+                        </div>
+
+                        <div style={{paddingTop: '16px', borderTop: '1px solid var(--border-color)', display:'flex', justifyContent:'flex-end'}}>
+                            <button className="btn-primary" onClick={handlePayment} disabled={isLoading}>
+                                {isLoading ? 'Procesando...' : 'Registrar Membresía'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

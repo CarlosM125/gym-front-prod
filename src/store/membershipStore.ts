@@ -36,7 +36,7 @@ interface MembershipState {
     fetchPlans: () => Promise<void>;
     fetchExpiringToday: () => Promise<void>;
     fetchHistoricalStats: (year: number) => Promise<void>;
-    renewMembership: (documentId: string, branchId: number, planId: number) => Promise<boolean>;
+    renewMembership: (payload: { documentId?: string; customerFullName: string; branchId?: number; planId?: number; amountPaid: number; startDate: string; }) => Promise<boolean>;
 }
 
 export const useMembershipStore = create<MembershipState>((set) => ({
@@ -78,10 +78,10 @@ export const useMembershipStore = create<MembershipState>((set) => ({
         }
     },
 
-    renewMembership: async (documentId: string, branchId: number, planId: number) => {
+    renewMembership: async (payload) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await apiClient.post<ApiResponse<Membership>>('/memberships/renew', { documentId, branchId, planId });
+            const response = await apiClient.post<ApiResponse<Membership>>('/memberships/renew', payload);
             if (response.data.success) {
                 set({ isLoading: false });
                 return true;
