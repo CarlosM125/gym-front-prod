@@ -43,7 +43,7 @@ export default function MasterLayout() {
                     <NavLink to="/clients/new" onClick={closeMobileMenu} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                         <UserPlus size={20} /> Nueva Membresía
                     </NavLink>
-                    <NavLink to="/clients" onClick={closeMobileMenu} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/clients" end onClick={closeMobileMenu} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                         <Users size={20} /> Todos los Clientes
                     </NavLink>
                     

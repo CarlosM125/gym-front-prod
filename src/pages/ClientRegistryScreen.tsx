@@ -2,14 +2,14 @@ import { useState, useRef, useEffect } from 'react';
 import { useCustomerStore } from '../store/customerStore';
 import { useBranchStore } from '../store/branchStore';
 import { useMembershipStore } from '../store/membershipStore';
-import { Upload, User, Mail } from 'lucide-react';
+import { Upload, User, Mail, Calendar, DollarSign } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { useNavigate } from 'react-router-dom';
 
 export default function ClientRegistryScreen() {
     const { registerCustomer } = useCustomerStore();
     const { branches, fetchBranches } = useBranchStore();
-    const { plans, fetchPlans, isLoading } = useMembershipStore();
+    const { plans, fetchPlans, isLoading, renewMembership } = useMembershipStore();
     const navigate = useNavigate();
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,6 +21,8 @@ export default function ClientRegistryScreen() {
     const [email, setEmail] = useState("");
     const [branchId, setBranchId] = useState("");
     const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+    const [amountPaid, setAmountPaid] = useState("");
+    const [transactionDate, setTransactionDate] = useState(() => new Date().toISOString().split('T')[0]);
 
     useEffect(() => {
         fetchBranches();
@@ -35,8 +37,13 @@ export default function ClientRegistryScreen() {
         }
     };
 
+    const handlePlanSelect = (planId: number, priceAmount: number) => {
+        setSelectedPlanId(planId);
+        setAmountPaid(priceAmount.toString());
+    };
+
     const handleRegister = async () => {
-        if (!docId || !fullName || !branchId || !selectedPlanId) return alert("LLene Documento, Nombre, Sucursal, y seleccione un Tipo de Membresía");
+        if (!fullName || !amountPaid) return alert("LLene el Nombre Completo y el Monto a pagar como mínimo");
         
         let finalImageUrl = "";
         if (selectedImage) {
@@ -55,17 +62,32 @@ export default function ClientRegistryScreen() {
             }
         }
 
-        const success = await registerCustomer({
-            documentId: docId, 
+        // 1. Registra al cliente
+        const customer = await registerCustomer({
+            documentId: docId || undefined, 
             fullName, 
-            email, 
-            homeBranchId: Number(branchId),
+            email: email || undefined, 
+            homeBranchId: branchId ? Number(branchId) : undefined,
             profileImageUrl: finalImageUrl || undefined
         });
 
-        if (success) {
-            alert("Cliente Registrado Físicamente ¡Felicidades!");
-            navigate('/clients');
+        if (customer) {
+            // 2. Registra la membresía usando los datos de fecha y pago
+            const memSuccess = await renewMembership({
+                documentId: docId || undefined,
+                customerFullName: fullName,
+                branchId: branchId ? Number(branchId) : undefined,
+                planId: selectedPlanId ? Number(selectedPlanId) : undefined,
+                amountPaid: Number(amountPaid),
+                startDate: transactionDate
+            });
+
+            if (memSuccess) {
+                alert("Cliente Registrado y Membresía Creada ¡Felicidades!");
+                navigate('/clients');
+            } else {
+                alert("Cliente registrado, pero hubo un error creando la membresía.");
+            }
         }
     };
 
@@ -90,29 +112,63 @@ export default function ClientRegistryScreen() {
                         <input type="file" ref={fileInputRef} style={{display: 'none'}} accept="image/*" onChange={handleImageChange} />
                     </div>
 
-                    <div style={{position: 'relative'}}>
+                    <div style={{position: 'relative', marginBottom: '16px'}}>
                         <User size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
-                        <input className="form-input" style={{paddingLeft: '40px'}} placeholder="Nombre Completo" value={fullName} onChange={e=>setFullName(e.target.value)} />
+                        <input className="form-input" style={{paddingLeft: '40px', margin:0}} placeholder="Nombre Completo *" value={fullName} onChange={e=>setFullName(e.target.value)} required />
                     </div>
 
-                    <div style={{position: 'relative'}}>
+                    <div style={{position: 'relative', marginBottom: '16px'}}>
                         <User size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
-                        <input className="form-input" style={{paddingLeft: '40px'}} placeholder="Documento (Cédula)" value={docId} onChange={e=>setDocId(e.target.value)} />
+                        <input className="form-input" style={{paddingLeft: '40px', margin:0}} placeholder="Documento (Cédula) - Opcional" value={docId} onChange={e=>setDocId(e.target.value)} />
                     </div>
 
-                    <div style={{position: 'relative'}}>
+                    <div style={{position: 'relative', marginBottom: '16px'}}>
                         <Mail size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
-                        <input className="form-input" style={{paddingLeft: '40px'}} placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
+                        <input className="form-input" style={{paddingLeft: '40px', margin:0}} placeholder="Email (Opcional)" value={email} onChange={e=>setEmail(e.target.value)} />
                     </div>
 
                     <select className="form-input" value={branchId} onChange={e=>setBranchId(e.target.value)}>
-                        <option value="" disabled>Seleccione Su Sucursal Base</option>
+                        <option value="">Seleccione Su Sucursal Base (Opcional)</option>
                         {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
                 </div>
 
                 <div>
-                    <h3 style={{marginBottom: '10px'}}>Tipo de Membresía</h3>
+                    <h3 style={{marginBottom: '10px'}}>Detalles del Pago y Membresía</h3>
+                    
+                    <div className="card" style={{marginBottom: '20px'}}>
+                        <div style={{marginBottom: '16px'}}>
+                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Fecha de Registro</label>
+                            <div style={{position: 'relative'}}>
+                                <Calendar size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
+                                <input 
+                                    type="date"
+                                    className="form-input" 
+                                    style={{paddingLeft: '40px', margin:0}}
+                                    value={transactionDate} 
+                                    onChange={e=>setTransactionDate(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{marginBottom: '16px'}}>
+                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Monto Pagado *</label>
+                            <div style={{position: 'relative'}}>
+                                <DollarSign size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
+                                <input 
+                                    type="number"
+                                    className="form-input" 
+                                    style={{paddingLeft: '40px', margin:0}}
+                                    placeholder="Valor en $" 
+                                    value={amountPaid} 
+                                    onChange={e=>setAmountPaid(e.target.value)}
+                                    required
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style={{marginBottom: '10px'}}>Elegir Plan (Opcional)</h3>
                     <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
                         {plans.map(p => (
                             <div 
@@ -123,7 +179,7 @@ export default function ClientRegistryScreen() {
                                     cursor: 'pointer',
                                     margin: 0
                                 }}
-                                onClick={() => setSelectedPlanId(p.id)}
+                                onClick={() => handlePlanSelect(p.id, p.priceAmount)}
                             >
                                 <div>
                                     <h4 style={{margin: '0 0 4px 0'}}>{p.name}</h4>
@@ -139,7 +195,7 @@ export default function ClientRegistryScreen() {
             <div style={{display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '32px', borderTop: '1px solid var(--border-color)', paddingTop: '20px'}}>
                 <button className="btn-outline" onClick={() => navigate('/dashboard')}>Cancelar</button>
                 <button className="btn-primary" onClick={handleRegister} disabled={isLoading}>
-                    {isLoading ? 'Guardando...' : 'Crear Membresía'}
+                    {isLoading ? 'Guardando...' : 'Crear Membresía y Cliente'}
                 </button>
             </div>
         </div>
