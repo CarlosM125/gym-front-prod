@@ -3,6 +3,7 @@ import { useMembershipStore } from '../store/membershipStore';
 import { useAuthStore } from '../store/authStore';
 import { AlertCircle, Phone, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import gymLogo from '../assets/logo gym.jpeg';
 
 export default function DashboardScreen() {
     const { user } = useAuthStore();
@@ -35,7 +36,7 @@ export default function DashboardScreen() {
                         <div key={item.id} className="card dashboard-item flex-between" style={{flexWrap: 'wrap'}}>
                             <div style={{display: 'flex', alignItems: 'center', minWidth: '250px'}}>
                                 <img 
-                                    src={item.user.profileImageUrl || "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"} 
+                                    src={item.user.profileImageUrl || gymLogo} 
                                     alt="Client" 
                                     className="client-avatar" 
                                 />

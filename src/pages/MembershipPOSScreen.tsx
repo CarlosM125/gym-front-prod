@@ -16,7 +16,6 @@ export default function MembershipPOSScreen() {
     const [branchId, setBranchId] = useState("");
     const [planId, setPlanId] = useState("");
     const [customerName, setCustomerName] = useState("");
-    const [amountPaid, setAmountPaid] = useState("");
     const [transactionDate, setTransactionDate] = useState(() => new Date().toISOString().split('T')[0]);
 
     useEffect(() => { 
@@ -49,24 +48,17 @@ export default function MembershipPOSScreen() {
         }
     };
 
-    const handlePlanChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedId = e.target.value;
-        setPlanId(selectedId);
-        const plan = plans.find(p => p.id === Number(selectedId));
-        if (plan) {
-            setAmountPaid(plan.priceAmount.toString());
-        }
-    };
-
     const handlePayment = async () => {
-        if (!customerName || !amountPaid) return alert("El nombre y el monto son obligatorios");
+        if (!customerName || !planId) return alert("El nombre y el plan son obligatorios");
+        
+        const selectedPlan = plans.find(p => p.id === Number(planId));
         
         const payload = {
             documentId: docId || undefined,
             customerFullName: customerName,
             branchId: branchId ? Number(branchId) : undefined,
-            planId: planId ? Number(planId) : undefined,
-            amountPaid: Number(amountPaid),
+            planId: Number(planId),
+            amountPaid: selectedPlan ? selectedPlan.priceAmount : 0,
             startDate: transactionDate
         };
 
@@ -76,7 +68,6 @@ export default function MembershipPOSScreen() {
             setDocId(""); 
             setPlanId(""); 
             setCustomerName(""); 
-            setAmountPaid("");
             setBranchId("");
             setTransactionDate(new Date().toISOString().split('T')[0]);
         }
@@ -85,7 +76,7 @@ export default function MembershipPOSScreen() {
     return (
         <div>
             <h1 className="page-title">Registrar Membresía</h1>
-            <p className="page-subtitle">Crea o renueva membresías (solo Nombre y Monto requeridos)</p>
+            <p className="page-subtitle">Crea o renueva membresías (Nombre y Plan requeridos)</p>
 
             <div className="grid-cols-2">
                 <div>
@@ -139,27 +130,15 @@ export default function MembershipPOSScreen() {
                         </div>
                         
                         <div style={{marginBottom: '1rem'}}>
-                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Plan de Membresía (Opcional)</label>
-                            <select className="form-input" value={planId} onChange={handlePlanChange}>
-                                <option value="">Personalizado / Otro (Opcional)</option>
+                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Plan de Membresía *</label>
+                            <select className="form-input" value={planId} onChange={e=>setPlanId(e.target.value)}>
+                                <option value="">Seleccione un Plan</option>
                                 {plans.map(p => (
                                     <option key={p.id} value={p.id}>
                                         {p.name} - ${p.priceAmount} ({p.durationDays} días)
                                     </option>
                                 ))}
                             </select>
-                        </div>
-
-                        <div style={{marginBottom: '1.5rem'}}>
-                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Monto a Pagar *</label>
-                            <input 
-                                type="number"
-                                className="form-input" 
-                                placeholder="Ingrese el valor" 
-                                value={amountPaid} 
-                                onChange={e=>setAmountPaid(e.target.value)}
-                                required
-                            />
                         </div>
 
                         <div style={{paddingTop: '16px', borderTop: '1px solid var(--border-color)', display:'flex', justifyContent:'flex-end'}}>

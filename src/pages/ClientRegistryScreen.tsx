@@ -21,7 +21,6 @@ export default function ClientRegistryScreen() {
     const [email, setEmail] = useState("");
     const [branchId, setBranchId] = useState("");
     const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
-    const [amountPaid, setAmountPaid] = useState("");
     const [transactionDate, setTransactionDate] = useState(() => new Date().toISOString().split('T')[0]);
 
     useEffect(() => {
@@ -37,14 +36,10 @@ export default function ClientRegistryScreen() {
         }
     };
 
-    const handlePlanSelect = (planId: number, priceAmount: number) => {
-        setSelectedPlanId(planId);
-        setAmountPaid(priceAmount.toString());
-    };
-
     const handleRegister = async () => {
-        if (!fullName || !amountPaid) return alert("LLene el Nombre Completo y el Monto a pagar como mínimo");
+        if (!fullName || !selectedPlanId) return alert("LLene el Nombre Completo y seleccione un Plan de Membresía");
         
+        const selectedPlan = plans.find(p => p.id === selectedPlanId);
         let finalImageUrl = "";
         if (selectedImage) {
             const formData = new FormData();
@@ -72,13 +67,13 @@ export default function ClientRegistryScreen() {
         });
 
         if (customer) {
-            // 2. Registra la membresía usando los datos de fecha y pago
+            // 2. Registra la membresía usando los datos de fecha y plan
             const memSuccess = await renewMembership({
                 documentId: docId || undefined,
                 customerFullName: fullName,
                 branchId: branchId ? Number(branchId) : undefined,
-                planId: selectedPlanId ? Number(selectedPlanId) : undefined,
-                amountPaid: Number(amountPaid),
+                planId: selectedPlanId,
+                amountPaid: selectedPlan ? selectedPlan.priceAmount : 0,
                 startDate: transactionDate
             });
 
@@ -150,25 +145,9 @@ export default function ClientRegistryScreen() {
                                 />
                             </div>
                         </div>
-
-                        <div style={{marginBottom: '16px'}}>
-                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Monto Pagado *</label>
-                            <div style={{position: 'relative'}}>
-                                <DollarSign size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
-                                <input 
-                                    type="number"
-                                    className="form-input" 
-                                    style={{paddingLeft: '40px', margin:0}}
-                                    placeholder="Valor en $" 
-                                    value={amountPaid} 
-                                    onChange={e=>setAmountPaid(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </div>
                     </div>
 
-                    <h3 style={{marginBottom: '10px'}}>Elegir Plan (Opcional)</h3>
+                    <h3 style={{marginBottom: '10px'}}>Elegir Plan *</h3>
                     <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
                         {plans.map(p => (
                             <div 
@@ -179,7 +158,7 @@ export default function ClientRegistryScreen() {
                                     cursor: 'pointer',
                                     margin: 0
                                 }}
-                                onClick={() => handlePlanSelect(p.id, p.priceAmount)}
+                                onClick={() => setSelectedPlanId(p.id)}
                             >
                                 <div>
                                     <h4 style={{margin: '0 0 4px 0'}}>{p.name}</h4>

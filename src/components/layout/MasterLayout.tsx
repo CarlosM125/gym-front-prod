@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { Home, RefreshCw, UserPlus, Users, BarChart2, LogOut, Menu, Settings } from 'lucide-react';
+import gymLogo from '../../assets/logo gym.jpeg';
 
 export default function MasterLayout() {
     const { logout, user } = useAuthStore();
@@ -26,7 +27,7 @@ export default function MasterLayout() {
             <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
                 <div className="sidebar-header">
                     <img 
-                        src="https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg" 
+                        src={gymLogo} 
                         alt="Friends Fitness Logo" 
                         className="sidebar-logo"
                     />
