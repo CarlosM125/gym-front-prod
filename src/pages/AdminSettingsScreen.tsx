@@ -16,6 +16,13 @@ export default function AdminSettingsScreen() {
     const [newAccRole, setNewAccRole] = useState('EMPLOYEE');
     const [newAccFirstName, setNewAccFirstName] = useState('');
 
+    // New Plan Form
+    const [newPlanName, setNewPlanName] = useState('');
+    const [newPlanDuration, setNewPlanDuration] = useState('');
+    const [newPlanPrice, setNewPlanPrice] = useState('');
+    const [newPlanDescription, setNewPlanDescription] = useState('');
+    const [newPlanIsPromo, setNewPlanIsPromo] = useState(false);
+
     useEffect(() => {
         fetchPlans();
         fetchAccounts();
@@ -63,6 +70,28 @@ export default function AdminSettingsScreen() {
         }
     };
 
+    const handleCreatePlan = async () => {
+        if (!newPlanName || !newPlanDuration || !newPlanPrice) return alert("Nombre, Duración y Precio son obligatorios");
+        try {
+            await apiClient.post('/memberships/plans', {
+                name: newPlanName,
+                durationDays: Number(newPlanDuration),
+                priceAmount: Number(newPlanPrice),
+                description: newPlanDescription,
+                isPromotion: newPlanIsPromo
+            });
+            alert("Plan creado exitosamente.");
+            setNewPlanName('');
+            setNewPlanDuration('');
+            setNewPlanPrice('');
+            setNewPlanDescription('');
+            setNewPlanIsPromo(false);
+            fetchPlans();
+        } catch (e) {
+            alert("Error al crear el plan.");
+        }
+    };
+
     return (
         <div>
             <div className="flex-between" style={{marginBottom: '24px'}}>
@@ -90,41 +119,51 @@ export default function AdminSettingsScreen() {
             </div>
 
             {activeTab === 'PLANS' && (
-                <div className="card">
-                    <div className="flex-between" style={{marginBottom: '16px'}}>
-                        <h3 style={{margin: 0}}>Membresías Vigentes</h3>
-                        <button className="btn-primary"><Plus size={16} style={{marginRight: '8px'}} /> Nuevo Plan</button>
+                <div className="grid-cols-2">
+                    <div className="card">
+                        <h3 style={{marginTop: 0, marginBottom: '16px'}}>Crear Nuevo Plan</h3>
+                        <input className="form-input" placeholder="Nombre del Plan (Ej. Mensualidad)" value={newPlanName} onChange={e=>setNewPlanName(e.target.value)} />
+                        <input className="form-input" placeholder="Descripción breve" value={newPlanDescription} onChange={e=>setNewPlanDescription(e.target.value)} />
+                        <input className="form-input" type="number" placeholder="Duración en Días (Ej. 30)" value={newPlanDuration} onChange={e=>setNewPlanDuration(e.target.value)} />
+                        <input className="form-input" type="number" placeholder="Precio Base (Ej. 35.00)" value={newPlanPrice} onChange={e=>setNewPlanPrice(e.target.value)} />
+                        <label style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px'}}>
+                            <input type="checkbox" checked={newPlanIsPromo} onChange={e=>setNewPlanIsPromo(e.target.checked)} />
+                            ¿Es una promoción?
+                        </label>
+                        <button className="btn-primary" style={{width: '100%'}} onClick={handleCreatePlan}>
+                            <Plus size={16} style={{marginRight: '8px'}} /> Registrar Plan
+                        </button>
                     </div>
-                    
-                    <div className="table-container">
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>Nombre del Plan</th>
-                                    <th>Duración</th>
-                                    <th>Precio Base</th>
-                                    <th>Estado / Tipo</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {plans.map(p => (
-                                    <tr key={p.id}>
-                                        <td style={{fontWeight: '500'}}>{p.name}</td>
-                                        <td>{p.durationDays} días</td>
-                                        <td><span style={{color: 'green', fontWeight: 'bold'}}>${p.priceAmount}</span></td>
-                                        <td>
-                                            <span className={`badge ${p.isPromotion ? 'danger' : 'dark'}`}>
-                                                {p.isPromotion ? 'Promoción' : 'Estándar'}
-                                            </span>
-                                        </td>
+
+                    <div className="card">
+                        <h3 style={{marginTop: 0, marginBottom: '16px'}}>Membresías Vigentes</h3>
+                        <div className="table-container">
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre del Plan</th>
+                                        <th>Duración / Precio</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {plans.map(p => (
+                                        <tr key={p.id}>
+                                            <td>
+                                                <div style={{fontWeight: '500'}}>{p.name}</div>
+                                                <span className={`badge ${p.isPromotion ? 'danger' : 'dark'}`} style={{marginTop: '4px'}}>
+                                                    {p.isPromotion ? 'Promoción' : 'Estándar'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div>{p.durationDays} días</div>
+                                                <div style={{color: 'green', fontWeight: 'bold'}}>${p.priceAmount}</div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <p className="text-muted" style={{fontSize: '0.85rem', marginTop: '16px'}}>
-                        Puedes editar estos precios contactando al nivel de red o implementando pronto el panel modal de edición in-situ.
-                    </p>
                 </div>
             )}
 
