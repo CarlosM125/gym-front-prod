@@ -49,7 +49,7 @@ export default function MembershipPOSScreen() {
     };
 
     const handlePayment = async () => {
-        if (!customerName || !planId) return alert("El nombre y el plan son obligatorios");
+        if (!customerName || !docId || !branchId || !planId) return alert("Nombre, Cédula, Sucursal y Plan son obligatorios");
         
         const selectedPlan = plans.find(p => p.id === Number(planId));
         
@@ -76,13 +76,13 @@ export default function MembershipPOSScreen() {
     return (
         <div>
             <h1 className="page-title">Registrar Membresía</h1>
-            <p className="page-subtitle">Crea o renueva membresías (Nombre y Plan requeridos)</p>
+            <p className="page-subtitle">Crea o renueva membresías (Nombre, Cédula, Sucursal y Plan requeridos)</p>
 
             <div className="grid-cols-2">
                 <div>
                     <h3 style={{marginBottom: '10px'}}>Datos del Cliente</h3>
                     <div style={{marginBottom: '16px'}}>
-                        <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Documento (Opcional)</label>
+                        <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Documento *</label>
                         <div style={{position: 'relative'}}>
                             <Search size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
                             <input 
@@ -92,6 +92,7 @@ export default function MembershipPOSScreen() {
                                 value={docId} 
                                 onChange={e=>setDocId(e.target.value)} 
                                 onBlur={handleDocIdBlur}
+                                required
                             />
                         </div>
                     </div>
@@ -122,9 +123,9 @@ export default function MembershipPOSScreen() {
                         </div>
                         
                         <div style={{marginBottom: '1rem'}}>
-                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Sucursal (Opcional)</label>
-                            <select className="form-input" value={branchId} onChange={e=>setBranchId(e.target.value)}>
-                                <option value="">Sin Sucursal (Opcional)</option>
+                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Sucursal *</label>
+                            <select className="form-input" value={branchId} onChange={e=>setBranchId(e.target.value)} required>
+                                <option value="">Seleccione Sucursal</option>
                                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                             </select>
                         </div>
@@ -142,7 +143,12 @@ export default function MembershipPOSScreen() {
                         </div>
 
                         <div style={{paddingTop: '16px', borderTop: '1px solid var(--border-color)', display:'flex', justifyContent:'flex-end'}}>
-                            <button className="btn-primary" onClick={handlePayment} disabled={isLoading}>
+                            <button 
+                                className="btn-primary" 
+                                onClick={handlePayment} 
+                                disabled={isLoading || !customerName || !docId || !branchId || !planId}
+                                style={{ opacity: (!customerName || !docId || !branchId || !planId) ? 0.6 : 1 }}
+                            >
                                 {isLoading ? 'Procesando...' : 'Registrar Membresía'}
                             </button>
                         </div>

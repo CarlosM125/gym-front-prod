@@ -14,6 +14,10 @@ export interface Customer {
     homeBranchId: number | null;
     homeBranchName?: string;
     createdAt?: string;
+    currentPlanName?: string;
+    currentStartDate?: string;
+    currentEndDate?: string;
+    membershipStatus?: string;
 }
 
 interface CustomerState {
@@ -23,6 +27,7 @@ interface CustomerState {
     registerCustomer: (data: Partial<Customer>) => Promise<Customer | null>;
     fetchCustomers: () => Promise<void>;
     fetchCustomerByDocId: (docId: string) => Promise<Customer | null>;
+    updateCustomer: (id: number, data: Partial<Customer>) => Promise<boolean>;
 }
 
 export const useCustomerStore = create<CustomerState>((set, get) => ({
@@ -68,6 +73,28 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
         } catch (error: any) {
             set({ error: error.response?.data?.message || 'Error registering customer', isLoading: false });
             return null;
+        }
+    },
+
+    updateCustomer: async (id: number, data: Partial<Customer>) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await apiClient.put<ApiResponse<Customer>>(`/customers/${id}`, data);
+            if (response.data.success) {
+                // Update in local state
+                const updatedCustomer = response.data.data;
+                set(state => ({
+                    customers: state.customers.map(c => c.id === id ? updatedCustomer : c),
+                    isLoading: false
+                }));
+                return true;
+            } else {
+                set({ error: response.data.message, isLoading: false });
+                return false;
+            }
+        } catch (error: any) {
+            set({ error: error.response?.data?.message || 'Error updating customer', isLoading: false });
+            return false;
         }
     }
 }));

@@ -37,7 +37,7 @@ export default function ClientRegistryScreen() {
     };
 
     const handleRegister = async () => {
-        if (!fullName || !selectedPlanId) return alert("LLene el Nombre Completo y seleccione un Plan de Membresía");
+        if (!fullName || !docId || !branchId || !selectedPlanId) return alert("Nombre, Cédula, Sucursal y Plan son obligatorios");
         
         const selectedPlan = plans.find(p => p.id === selectedPlanId);
         let finalImageUrl = "";
@@ -69,6 +69,7 @@ export default function ClientRegistryScreen() {
         if (customer) {
             // 2. Registra la membresía usando los datos de fecha y plan
             const memSuccess = await renewMembership({
+                customerId: customer.id,
                 documentId: docId || undefined,
                 customerFullName: fullName,
                 branchId: branchId ? Number(branchId) : undefined,
@@ -114,7 +115,7 @@ export default function ClientRegistryScreen() {
 
                     <div style={{position: 'relative', marginBottom: '16px'}}>
                         <User size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
-                        <input className="form-input" style={{paddingLeft: '40px', margin:0}} placeholder="Documento (Cédula) - Opcional" value={docId} onChange={e=>setDocId(e.target.value)} />
+                        <input className="form-input" style={{paddingLeft: '40px', margin:0}} placeholder="Documento (Cédula) *" value={docId} onChange={e=>setDocId(e.target.value)} required />
                     </div>
 
                     <div style={{position: 'relative', marginBottom: '16px'}}>
@@ -122,8 +123,8 @@ export default function ClientRegistryScreen() {
                         <input className="form-input" style={{paddingLeft: '40px', margin:0}} placeholder="Email (Opcional)" value={email} onChange={e=>setEmail(e.target.value)} />
                     </div>
 
-                    <select className="form-input" value={branchId} onChange={e=>setBranchId(e.target.value)}>
-                        <option value="">Seleccione Su Sucursal Base (Opcional)</option>
+                    <select className="form-input" value={branchId} onChange={e=>setBranchId(e.target.value)} required>
+                        <option value="">Seleccione Su Sucursal Base *</option>
                         {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
                 </div>
@@ -173,7 +174,12 @@ export default function ClientRegistryScreen() {
 
             <div style={{display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '32px', borderTop: '1px solid var(--border-color)', paddingTop: '20px'}}>
                 <button className="btn-outline" onClick={() => navigate('/dashboard')}>Cancelar</button>
-                <button className="btn-primary" onClick={handleRegister} disabled={isLoading}>
+                <button 
+                    className="btn-primary" 
+                    onClick={handleRegister} 
+                    disabled={isLoading || !fullName || !docId || !branchId || !selectedPlanId}
+                    style={{ opacity: (!fullName || !docId || !branchId || !selectedPlanId) ? 0.6 : 1 }}
+                >
                     {isLoading ? 'Guardando...' : 'Crear Membresía y Cliente'}
                 </button>
             </div>

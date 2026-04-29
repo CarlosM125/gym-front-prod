@@ -36,7 +36,7 @@ interface MembershipState {
     fetchPlans: () => Promise<void>;
     fetchExpiringToday: () => Promise<void>;
     fetchHistoricalStats: (year: number) => Promise<void>;
-    renewMembership: (payload: { documentId?: string; customerFullName: string; branchId?: number; planId?: number; amountPaid: number; startDate: string; }) => Promise<boolean>;
+    renewMembership: (payload: { customerId?: number; documentId?: string; customerFullName: string; branchId?: number; planId?: number; amountPaid: number; startDate: string; }) => Promise<boolean>;
 }
 
 export const useMembershipStore = create<MembershipState>((set) => ({
