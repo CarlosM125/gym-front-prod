@@ -17,22 +17,24 @@ export default function ClientListScreen() {
         fetchCustomers();
     }, [fetchCustomers]);
 
-    const filteredCustomers = customers.filter(c => {
-        const matchesSearch = c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              (c.email || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              (c.documentId || '').includes(searchTerm);
-        
-        if (!matchesSearch) return false;
+    const filteredCustomers = customers
+        .filter(c => c != null)  // guard against null/undefined entries from API
+        .filter(c => {
+            const matchesSearch = (c.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                  (c.email || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                  (c.documentId || '').includes(searchTerm);
+            
+            if (!matchesSearch) return false;
 
-        const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toISOString().split('T')[0];
 
-        switch (filterStatus) {
-            case 'ACTIVE': return c.membershipStatus === 'ACTIVE';
-            case 'EXPIRED': return c.membershipStatus === 'EXPIRED' || !c.membershipStatus;
-            case 'EXPIRING_TODAY': return c.currentEndDate === today;
-            default: return true;
-        }
-    });
+            switch (filterStatus) {
+                case 'ACTIVE': return c.membershipStatus === 'ACTIVE';
+                case 'EXPIRED': return c.membershipStatus === 'EXPIRED' || !c.membershipStatus;
+                case 'EXPIRING_TODAY': return c.currentEndDate === today;
+                default: return true;
+            }
+        });
 
     const handleEditClick = (c: any) => {
         setEditingCustomer(c);
@@ -107,20 +109,21 @@ export default function ClientListScreen() {
                                     <tr key={c.id}>
                                         <td>
                                             <img 
-                                                src={c.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.fullName)}&background=d62020&color=fff`} 
-                                                alt={c.fullName} 
+                                                src={c?.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(c?.fullName || 'Cliente')}&background=d62020&color=fff`} 
+                                                alt={c?.fullName || 'Cliente'} 
                                                 className="client-avatar"
                                                 style={{margin:0, width:'40px', height:'40px'}}
+                                                onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=C&background=d62020&color=fff`; }}
                                             />
                                         </td>
-                                        <td style={{fontWeight: '500'}}>{c.fullName}</td>
-                                        <td className="text-muted">{c.documentId || '—'}</td>
-                                        <td><span className="badge dark">{c.currentPlanName || 'Ninguna'}</span></td>
-                                        <td className="text-muted">{c.currentStartDate || '—'}</td>
-                                        <td className="text-muted">{c.currentEndDate || '—'}</td>
+                                        <td style={{fontWeight: '500'}}>{c?.fullName || '—'}</td>
+                                        <td className="text-muted">{c?.documentId || '—'}</td>
+                                        <td><span className="badge dark">{c?.currentPlanName || 'Ninguna'}</span></td>
+                                        <td className="text-muted">{c?.currentStartDate || '—'}</td>
+                                        <td className="text-muted">{c?.currentEndDate || '—'}</td>
                                         <td>
-                                            <span className={`badge ${c.membershipStatus === 'ACTIVE' ? 'success' : 'danger'}`}>
-                                                {c.membershipStatus === 'ACTIVE' ? 'Activo' : 'Inactivo'}
+                                            <span className={`badge ${c?.membershipStatus === 'ACTIVE' ? 'success' : 'danger'}`}>
+                                                {c?.membershipStatus === 'ACTIVE' ? 'Activo' : 'Inactivo'}
                                             </span>
                                         </td>
                                         <td>
