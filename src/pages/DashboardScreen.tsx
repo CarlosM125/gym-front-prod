@@ -32,33 +32,36 @@ export default function DashboardScreen() {
                 {expiringToday.length === 0 ? (
                     <p className="text-muted">No hay vencimientos reportados para hoy.</p>
                 ) : (
-                    expiringToday.map((item: any) => (
+                    expiringToday
+                        .filter((item: any) => item != null)
+                        .map((item: any) => (
                         <div key={item.id} className="card dashboard-item flex-between" style={{flexWrap: 'wrap'}}>
                             <div style={{display: 'flex', alignItems: 'center', minWidth: '250px'}}>
                                 <img 
-                                    src={item.user.profileImageUrl || gymLogo} 
+                                    src={item?.profileImageUrl || gymLogo} 
                                     alt="Client" 
-                                    className="client-avatar" 
+                                    className="client-avatar"
+                                    onError={(e) => { (e.target as HTMLImageElement).src = gymLogo; }}
                                 />
                                 <div>
-                                    <h3 style={{margin: '0 0 4px 0', fontSize: '1rem'}}>{item.user.fullName}</h3>
-                                    <span className="badge dark">{item.membershipPlan.name}</span>
+                                    <h3 style={{margin: '0 0 4px 0', fontSize: '1rem'}}>{item?.userFullName || item?.user?.fullName || '—'}</h3>
+                                    <span className="badge dark">{item?.planName || item?.membershipPlan?.name || 'Plan'}</span>
                                 </div>
                             </div>
                             
                             <div style={{flex: 1, display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center'}}>
                                 <div className="text-muted" style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem'}}>
-                                    <Mail size={16} /> {item.user.email}
+                                    <Mail size={16} /> {item?.email || item?.user?.email || '—'}
                                 </div>
                                 <div className="text-muted" style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem'}}>
-                                    <Phone size={16} /> CC: {item.user.documentId}
+                                    <Phone size={16} /> CC: {item?.documentId || item?.user?.documentId || '—'}
                                 </div>
                             </div>
 
                             <div style={{textAlign: 'right', minWidth: '150px'}}>
-                                <div style={{fontSize: '1.2rem', fontWeight: 'bold'}}>${item.membershipPlan.priceAmount}</div>
-                                <div className="text-muted" style={{fontSize: '0.8rem', marginBottom: '8px'}}>Mensual</div>
-                                <button className="btn-primary" onClick={() => handleRenewClick(item.user.documentId)}>
+                                <div style={{fontSize: '1.2rem', fontWeight: 'bold'}}>${item?.amountPaid ?? item?.membershipPlan?.priceAmount ?? '—'}</div>
+                                <div className="text-muted" style={{fontSize: '0.8rem', marginBottom: '8px'}}>Membresía</div>
+                                <button className="btn-primary" onClick={() => handleRenewClick(item?.documentId || item?.user?.documentId || '')}>
                                     Renovar Ahora
                                 </button>
                             </div>
