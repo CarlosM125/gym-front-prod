@@ -1,31 +1,68 @@
 import { useEffect, useState } from 'react';
 import { useMembershipStore } from '../store/membershipStore';
 import { useAuthStore } from '../store/authStore';
-import { AlertCircle, Calendar, CalendarDays, Clock, RefreshCw } from 'lucide-react';
+import { AlertCircle, Calendar, CalendarDays, Clock, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import gymLogo from '../assets/logo gym.jpeg';
 
-type FilterType = 'today' | '3days' | '7days';
+type FilterKey = 'today' | 'next3' | 'next7' | 'prev3' | 'prev7';
 
-const FILTERS: { key: FilterType; label: string; pastDays: number; futureDays: number; icon: React.ReactNode }[] = [
-    { key: 'today',  label: 'Hoy',            pastDays: 0, futureDays: 0, icon: <Clock size={16} /> },
-    { key: '3days',  label: '3 días',          pastDays: 3, futureDays: 3, icon: <Calendar size={16} /> },
-    { key: '7days',  label: 'Esta Semana',     pastDays: 7, futureDays: 7, icon: <CalendarDays size={16} /> },
+// Helper: returns ISO date string "YYYY-MM-DD"
+const isoDate = (d: Date) => d.toISOString().split('T')[0];
+
+const today = () => new Date();
+const addDays = (d: Date, n: number) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+
+const FILTERS: { key: FilterKey; label: string; icon: React.ReactNode; getRange: () => { from: string; to: string } }[] = [
+    {
+        key: 'prev7',
+        label: 'Semana anterior',
+        icon: <ChevronLeft size={16} />,
+        getRange: () => ({ from: isoDate(addDays(today(), -7)), to: isoDate(addDays(today(), -1)) })
+    },
+    {
+        key: 'prev3',
+        label: '3 días anteriores',
+        icon: <ChevronLeft size={16} />,
+        getRange: () => ({ from: isoDate(addDays(today(), -3)), to: isoDate(addDays(today(), -1)) })
+    },
+    {
+        key: 'today',
+        label: 'Hoy',
+        icon: <Clock size={16} />,
+        getRange: () => ({ from: isoDate(today()), to: isoDate(today()) })
+    },
+    {
+        key: 'next3',
+        label: 'Siguientes 3 días',
+        icon: <ChevronRight size={16} />,
+        getRange: () => ({ from: isoDate(addDays(today(), 1)), to: isoDate(addDays(today(), 3)) })
+    },
+    {
+        key: 'next7',
+        label: 'Esta semana',
+        icon: <CalendarDays size={16} />,
+        getRange: () => ({ from: isoDate(addDays(today(), 1)), to: isoDate(addDays(today(), 7)) })
+    },
 ];
 
 export default function DashboardScreen() {
     const { user } = useAuthStore();
     const { expiringToday, fetchExpiring, isLoading } = useMembershipStore();
     const navigate = useNavigate();
-    const [activeFilter, setActiveFilter] = useState<FilterType>('today');
+    const [activeFilter, setActiveFilter] = useState<FilterKey>('today');
 
     useEffect(() => {
-        if (user) fetchExpiring(0, 0);
+        if (user) {
+            const range = FILTERS.find(f => f.key === 'today')!.getRange();
+            fetchExpiring(range.from, range.to);
+        }
     }, [user, fetchExpiring]);
 
-    const handleFilterChange = (filter: FilterType, pastDays: number, futureDays: number) => {
-        setActiveFilter(filter);
-        fetchExpiring(pastDays, futureDays);
+    const handleFilterChange = (filter: typeof FILTERS[0]) => {
+        setActiveFilter(filter.key);
+        const { from, to } = filter.getRange();
+        fetchExpiring(from, to);
     };
 
     const handleRenewClick = (documentId?: string) => {
@@ -35,13 +72,17 @@ export default function DashboardScreen() {
     const formatDate = (dateStr?: string) => {
         if (!dateStr) return '—';
         try {
-            return new Date(dateStr).toLocaleDateString('es-ES', {
+            // Parse as local date to avoid timezone offset shifting the day
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d).toLocaleDateString('es-ES', {
                 day: '2-digit', month: 'short', year: 'numeric'
             });
         } catch { return dateStr; }
     };
 
     const items = (expiringToday || []).filter(item => item != null);
+    const activeFilterDef = FILTERS.find(f => f.key === activeFilter)!;
+    const activeRange = activeFilterDef.getRange();
 
     return (
         <div>
@@ -50,14 +91,14 @@ export default function DashboardScreen() {
                 {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
 
-            {/* ── Filtros ── */}
+            {/* ── 5 Filtros ── */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
                 {FILTERS.map(f => (
                     <button
                         key={f.key}
                         className={activeFilter === f.key ? 'btn-primary' : 'btn-outline'}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                        onClick={() => handleFilterChange(f.key, f.pastDays, f.futureDays)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+                        onClick={() => handleFilterChange(f)}
                     >
                         {f.icon} {f.label}
                     </button>
@@ -70,13 +111,7 @@ export default function DashboardScreen() {
                 <span>
                     {isLoading
                         ? 'Cargando...'
-                        : `${items.length} membresía${items.length !== 1 ? 's' : ''} ${
-                            activeFilter === 'today'
-                                ? 'vence hoy'
-                                : activeFilter === '3days'
-                                ? 'en el rango de ±3 días'
-                                : 'en el rango de ±7 días'
-                          }`
+                        : `${items.length} membres\u00eda${items.length !== 1 ? 's' : ''} — ${activeFilterDef.label} (${formatDate(activeRange.from)}${activeRange.from !== activeRange.to ? ` → ${formatDate(activeRange.to)}` : ''})`
                     }
                 </span>
             </div>
@@ -88,17 +123,17 @@ export default function DashboardScreen() {
                 </div>
             ) : items.length === 0 ? (
                 <div className="card" style={{ textAlign: 'center', padding: '48px 20px' }}>
-                    <CalendarDays size={48} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
+                    <Calendar size={48} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
                     <p className="text-muted">No hay vencimientos para este período.</p>
                 </div>
             ) : (
                 <div className="dashboard-list">
                     {items.map((item: any) => {
-                        const name = item?.customerFullName || item?.userFullName || item?.user?.fullName || '—';
-                        const docId = item?.documentId || item?.user?.documentId;
-                        const avatar = item?.profileImageUrl || item?.user?.profileImageUrl;
+                        const name      = item?.customerFullName || item?.userFullName || item?.user?.fullName || '—';
+                        const docId     = item?.documentId || item?.user?.documentId;
+                        const avatar    = item?.profileImageUrl || item?.user?.profileImageUrl;
                         const startDate = item?.startDate;
-                        const endDate = item?.endDate;
+                        const endDate   = item?.endDate;
 
                         return (
                             <div key={item.id} className="card dashboard-item" style={{
