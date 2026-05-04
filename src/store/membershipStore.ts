@@ -9,7 +9,9 @@ export interface Membership {
     endDate: string;
     status: string;
     userFullName: string;
+    customerFullName: string;
     documentId: string;
+    profileImageUrl?: string;
 }
 
 export interface ChartData {
@@ -35,6 +37,7 @@ interface MembershipState {
     error: string | null;
     fetchPlans: () => Promise<void>;
     fetchExpiringToday: () => Promise<void>;
+    fetchExpiring: (days: number) => Promise<void>;
     fetchHistoricalStats: (year: number) => Promise<void>;
     renewMembership: (payload: { customerId?: number; documentId?: string; customerFullName: string; branchId?: number; planId?: number; amountPaid: number; startDate: string; }) => Promise<boolean>;
 }
@@ -57,7 +60,19 @@ export const useMembershipStore = create<MembershipState>((set) => ({
     fetchExpiringToday: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await apiClient.get<ApiResponse<Membership[]>>('/memberships/expiring-today');
+            const response = await apiClient.get<ApiResponse<Membership[]>>('/memberships/expiring?days=1');
+            if (response.data.success) {
+                set({ expiringToday: response.data.data, isLoading: false });
+            }
+        } catch (error: any) {
+            set({ error: error.message, isLoading: false });
+        }
+    },
+
+    fetchExpiring: async (days: number) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await apiClient.get<ApiResponse<Membership[]>>(`/memberships/expiring?days=${days}`);
             if (response.data.success) {
                 set({ expiringToday: response.data.data, isLoading: false });
             }
