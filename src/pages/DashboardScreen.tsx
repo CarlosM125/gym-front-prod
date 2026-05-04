@@ -7,10 +7,10 @@ import gymLogo from '../assets/logo gym.jpeg';
 
 type FilterType = 'today' | '3days' | '7days';
 
-const FILTERS: { key: FilterType; label: string; days: number; icon: React.ReactNode }[] = [
-    { key: 'today',  label: 'Hoy',          days: 1, icon: <Clock size={16} /> },
-    { key: '3days',  label: 'Últimos 3 días', days: 3, icon: <Calendar size={16} /> },
-    { key: '7days',  label: 'Esta Semana',   days: 7, icon: <CalendarDays size={16} /> },
+const FILTERS: { key: FilterType; label: string; pastDays: number; futureDays: number; icon: React.ReactNode }[] = [
+    { key: 'today',  label: 'Hoy',            pastDays: 0, futureDays: 0, icon: <Clock size={16} /> },
+    { key: '3days',  label: '3 días',          pastDays: 3, futureDays: 3, icon: <Calendar size={16} /> },
+    { key: '7days',  label: 'Esta Semana',     pastDays: 7, futureDays: 7, icon: <CalendarDays size={16} /> },
 ];
 
 export default function DashboardScreen() {
@@ -20,12 +20,12 @@ export default function DashboardScreen() {
     const [activeFilter, setActiveFilter] = useState<FilterType>('today');
 
     useEffect(() => {
-        if (user) fetchExpiring(1);
+        if (user) fetchExpiring(0, 0);
     }, [user, fetchExpiring]);
 
-    const handleFilterChange = (filter: FilterType, days: number) => {
+    const handleFilterChange = (filter: FilterType, pastDays: number, futureDays: number) => {
         setActiveFilter(filter);
-        fetchExpiring(days);
+        fetchExpiring(pastDays, futureDays);
     };
 
     const handleRenewClick = (documentId?: string) => {
@@ -57,7 +57,7 @@ export default function DashboardScreen() {
                         key={f.key}
                         className={activeFilter === f.key ? 'btn-primary' : 'btn-outline'}
                         style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                        onClick={() => handleFilterChange(f.key, f.days)}
+                        onClick={() => handleFilterChange(f.key, f.pastDays, f.futureDays)}
                     >
                         {f.icon} {f.label}
                     </button>
@@ -70,10 +70,12 @@ export default function DashboardScreen() {
                 <span>
                     {isLoading
                         ? 'Cargando...'
-                        : `${items.length} membresía${items.length !== 1 ? 's' : ''} vence${items.length !== 1 ? 'n' : ''} ${
-                            activeFilter === 'today' ? 'hoy' :
-                            activeFilter === '3days' ? 'en los próximos 3 días' :
-                            'esta semana'
+                        : `${items.length} membresía${items.length !== 1 ? 's' : ''} ${
+                            activeFilter === 'today'
+                                ? 'vence hoy'
+                                : activeFilter === '3days'
+                                ? 'en el rango de ±3 días'
+                                : 'en el rango de ±7 días'
                           }`
                     }
                 </span>

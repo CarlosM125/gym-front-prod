@@ -37,7 +37,7 @@ interface MembershipState {
     error: string | null;
     fetchPlans: () => Promise<void>;
     fetchExpiringToday: () => Promise<void>;
-    fetchExpiring: (days: number) => Promise<void>;
+    fetchExpiring: (pastDays: number, futureDays: number) => Promise<void>;
     fetchHistoricalStats: (year: number) => Promise<void>;
     renewMembership: (payload: { customerId?: number; documentId?: string; customerFullName: string; branchId?: number; planId?: number; amountPaid: number; startDate: string; }) => Promise<boolean>;
 }
@@ -69,10 +69,12 @@ export const useMembershipStore = create<MembershipState>((set) => ({
         }
     },
 
-    fetchExpiring: async (days: number) => {
+    fetchExpiring: async (pastDays: number, futureDays: number) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await apiClient.get<ApiResponse<Membership[]>>(`/memberships/expiring?days=${days}`);
+            const response = await apiClient.get<ApiResponse<Membership[]>>(
+                `/memberships/expiring?pastDays=${pastDays}&futureDays=${futureDays}`
+            );
             if (response.data.success) {
                 set({ expiringToday: response.data.data, isLoading: false });
             }
