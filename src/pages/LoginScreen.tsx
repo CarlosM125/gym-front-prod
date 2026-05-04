@@ -1,46 +1,88 @@
-import { useState } from 'react';
+import { useState, KeyboardEvent } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
+import { Lock, User, Eye, EyeOff } from 'lucide-react';
+import gymLogo from '../assets/logo gym.jpeg';
 
 export default function LoginScreen() {
     const { login, isLoading, error } = useAuthStore();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPass, setShowPass] = useState(false);
     const navigate = useNavigate();
 
     const handleLogin = async () => {
         const success = await login(username, password);
-        if (success) {
-            navigate('/dashboard');
-        }
+        if (success) navigate('/dashboard');
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Enter' && username && password) handleLogin();
     };
 
     return (
-        <div className="login-container">
-            <div className="glass-panel action-panel login-box">
-                <h2>GymOS Login</h2>
-                {error && <div className="error-banner">{error}</div>}
-                <div className="form-group vertical-flex">
-                    <input 
-                        className="glass-input full-w" 
-                        placeholder="Admin / Employee ID" 
-                        value={username} 
-                        onChange={(e) => setUsername(e.target.value)} 
-                    />
-                    <input 
-                        className="glass-input full-w" 
-                        type="password"
-                        placeholder="Password" 
-                        value={password} 
-                        onChange={(e) => setPassword(e.target.value)} 
-                    />
-                    <button onClick={handleLogin} disabled={isLoading || !username || !password}>
-                        {isLoading ? 'Verifying...' : 'Acceder'}
-                    </button>
-                    <p className="text-muted" style={{marginTop: '1rem', fontSize: '12px'}}>
-                        For setup use credentials: admin / admin123
-                    </p>
+        <div className="login-page">
+            <div className="login-card">
+
+                {/* Logo + encabezado */}
+                <div className="login-header">
+                    <img src={gymLogo} alt="Friends Fitness" className="login-logo" />
+                    <h1 className="login-title">Friends Fitness</h1>
+                    <p className="login-subtitle">Sistema de Gestión</p>
                 </div>
+
+                {/* Error */}
+                {error && <div className="login-error">{error}</div>}
+
+                {/* Usuario */}
+                <div className="login-input-wrap">
+                    <span className="login-input-icon"><User size={18} /></span>
+                    <input
+                        id="login-username"
+                        type="text"
+                        placeholder="Usuario"
+                        autoComplete="username"
+                        className="login-input"
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                    />
+                </div>
+
+                {/* Contraseña */}
+                <div className="login-input-wrap last">
+                    <span className="login-input-icon"><Lock size={18} /></span>
+                    <input
+                        id="login-password"
+                        type={showPass ? 'text' : 'password'}
+                        placeholder="Contraseña"
+                        autoComplete="current-password"
+                        className="login-input has-toggle"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                    />
+                    <button
+                        className="login-toggle-btn"
+                        onClick={() => setShowPass(p => !p)}
+                        tabIndex={-1}
+                    >
+                        {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                </div>
+
+                {/* Botón de acceso */}
+                <button
+                    className="login-btn"
+                    onClick={handleLogin}
+                    disabled={isLoading || !username || !password}
+                >
+                    {isLoading ? 'Verificando...' : 'Ingresar'}
+                </button>
+
+                <p className="login-footer">
+                    © {new Date().getFullYear()} Friends Fitness ERP
+                </p>
             </div>
         </div>
     );
