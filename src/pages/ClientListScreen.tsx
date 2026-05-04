@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useCustomerStore } from '../store/customerStore';
-import { Edit2, X, Search } from 'lucide-react';
+import { Edit2, X, Search, Upload } from 'lucide-react';
+import { apiClient } from '../api/client';
 
 export default function ClientListScreen() {
     const { customers, fetchCustomers, isLoading, updateCustomer } = useCustomerStore();
@@ -12,6 +13,9 @@ export default function ClientListScreen() {
     const [editName, setEditName] = useState('');
     const [editDoc, setEditDoc] = useState('');
     const [editEmail, setEditEmail] = useState('');
+    const [selectedImage, setSelectedImage] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         fetchCustomers();
@@ -41,16 +45,46 @@ export default function ClientListScreen() {
         setEditName(c.fullName);
         setEditDoc(c.documentId);
         setEditEmail(c.email || '');
+        setImagePreview(c.profileImageUrl || null);
+        setSelectedImage(null);
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setSelectedImage(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
     };
 
     const handleSaveEdit = async () => {
         if (!editingCustomer) return;
         if (!editName || !editDoc) return alert("Nombre y Cédula son obligatorios");
 
+        let finalImageUrl = editingCustomer.profileImageUrl;
+
+        if (selectedImage) {
+            const formData = new FormData();
+            formData.append("file", selectedImage);
+            try {
+                const imgRes = await apiClient.post<{success: boolean, data: {url: string}}>("/users/upload-image", formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                if (imgRes.data.success) {
+                    finalImageUrl = imgRes.data.data.url;
+                }
+            } catch (e) {
+                console.error("Backend image upload error", e);
+                alert("Error al subir foto de perfil");
+                return; // Stop update if image upload fails? Or continue? Let's continue but maybe warn. Actually, better to stop to let them retry.
+            }
+        }
+
         const success = await updateCustomer(editingCustomer.id, {
             fullName: editName,
             documentId: editDoc,
-            email: editEmail
+            email: editEmail,
+            profileImageUrl: finalImageUrl || undefined
         });
         
         if (success) {
@@ -152,6 +186,18 @@ export default function ClientListScreen() {
                             <button className="btn-outline" style={{border: 'none', padding: '4px'}} onClick={() => setEditingCustomer(null)}>
                                 <X size={20} />
                             </button>
+                        </div>
+
+                        <div style={{textAlign: 'center', marginBottom: '20px', cursor: 'pointer'}} onClick={() => fileInputRef.current?.click()}>
+                            {imagePreview ? (
+                                <img src={imagePreview} alt="Preview" style={{width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-color)'}} />
+                            ) : (
+                                <div style={{width: '100px', height: '100px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--border-color)', borderRadius: '50%'}}>
+                                    <Upload size={24} style={{color: 'var(--text-muted)', marginBottom: '4px'}} />
+                                </div>
+                            )}
+                            <input type="file" ref={fileInputRef} style={{display: 'none'}} accept="image/*" onChange={handleImageChange} />
+                            <div style={{fontSize: '0.8rem', color: 'var(--primary-color)', marginTop: '8px', fontWeight: 500}}>Cambiar Foto</div>
                         </div>
                         
                         <label style={{display: 'block', marginBottom: '4px', fontSize: '0.9rem'}}>Nombre Completo *</label>
