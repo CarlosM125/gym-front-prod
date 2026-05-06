@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useCustomerStore } from '../store/customerStore';
+import { useMembershipStore } from '../store/membershipStore';
 import { Edit2, X, Search, Upload } from 'lucide-react';
 import { apiClient } from '../api/client';
 
