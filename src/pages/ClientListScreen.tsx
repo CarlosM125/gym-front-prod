@@ -13,9 +13,13 @@ export default function ClientListScreen() {
     const [editName, setEditName] = useState('');
     const [editDoc, setEditDoc] = useState('');
     const [editEmail, setEditEmail] = useState('');
+    const [editStartDate, setEditStartDate] = useState('');
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    const { updateMembershipStartDate } = useMembershipStore();
 
     useEffect(() => {
         fetchCustomers();
@@ -45,6 +49,7 @@ export default function ClientListScreen() {
         setEditName(c.fullName);
         setEditDoc(c.documentId);
         setEditEmail(c.email || '');
+        setEditStartDate(c.currentStartDate || '');
         setImagePreview(c.profileImageUrl || null);
         setSelectedImage(null);
     };
@@ -61,6 +66,20 @@ export default function ClientListScreen() {
         if (!editingCustomer) return;
         if (!editName || !editDoc) return alert("Nombre y Cédula son obligatorios");
 
+        // Check if anything actually changed
+        const hasDataChanged = 
+            editName !== editingCustomer.fullName ||
+            editDoc !== editingCustomer.documentId ||
+            editEmail !== (editingCustomer.email || '');
+            
+        const hasDateChanged = editStartDate !== (editingCustomer.currentStartDate || '');
+        const hasImageChanged = selectedImage !== null;
+
+        if (!hasDataChanged && !hasDateChanged && !hasImageChanged) {
+            return setEditingCustomer(null); // No changes made
+        }
+
+        setIsSaving(true);
         let finalImageUrl = editingCustomer.profileImageUrl;
 
         if (selectedImage) {
@@ -76,20 +95,34 @@ export default function ClientListScreen() {
             } catch (e) {
                 console.error("Backend image upload error", e);
                 alert("Error al subir foto de perfil");
-                return; // Stop update if image upload fails? Or continue? Let's continue but maybe warn. Actually, better to stop to let them retry.
+                setIsSaving(false);
+                return; 
             }
         }
 
-        const success = await updateCustomer(editingCustomer.id, {
-            fullName: editName,
-            documentId: editDoc,
-            email: editEmail,
-            profileImageUrl: finalImageUrl || undefined
-        });
+        let customerUpdated = true;
+        if (hasDataChanged || hasImageChanged) {
+            customerUpdated = await updateCustomer(editingCustomer.id, {
+                fullName: editName,
+                documentId: editDoc,
+                email: editEmail,
+                profileImageUrl: finalImageUrl || undefined
+            });
+        }
+
+        let dateUpdated = true;
+        if (hasDateChanged && editingCustomer.membershipStatus === 'ACTIVE') {
+            dateUpdated = await updateMembershipStartDate(editingCustomer.id, editStartDate);
+        }
         
-        if (success) {
+        setIsSaving(false);
+
+        if (customerUpdated && dateUpdated) {
             setEditingCustomer(null);
-            alert("Cliente actualizado exitosamente");
+            alert("Actualizado exitosamente");
+            fetchCustomers(); // Refresh to get recalculated end dates
+        } else {
+            alert("Hubo un problema al actualizar algunos datos.");
         }
     };
 
@@ -204,14 +237,39 @@ export default function ClientListScreen() {
                         <input className="form-input" value={editName} onChange={e=>setEditName(e.target.value)} />
                         
                         <label style={{display: 'block', marginBottom: '4px', fontSize: '0.9rem'}}>Cédula / Documento *</label>
-                        <input className="form-input" value={editDoc} onChange={e=>setEditDoc(e.target.value)} />
+                        <input className="form-input" value={editDoc} onChange={e=>setEditDoc(e.target.value)} disabled={isSaving} />
                         
                         <label style={{display: 'block', marginBottom: '4px', fontSize: '0.9rem'}}>Email (Opcional)</label>
-                        <input className="form-input" value={editEmail} onChange={e=>setEditEmail(e.target.value)} />
+                        <input className="form-input" value={editEmail} onChange={e=>setEditEmail(e.target.value)} disabled={isSaving} />
+
+                        {editingCustomer.membershipStatus === 'ACTIVE' && (
+                            <>
+                                <label style={{display: 'block', marginBottom: '4px', fontSize: '0.9rem', color: 'var(--primary-color)'}}>
+                                    Fecha Inicio (Membresía Activa)
+                                </label>
+                                <input 
+                                    type="date" 
+                                    className="form-input" 
+                                    style={{borderColor: 'var(--primary-color)'}}
+                                    value={editStartDate} 
+                                    onChange={e=>setEditStartDate(e.target.value)} 
+                                    disabled={isSaving}
+                                />
+                                <p style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '-10px', marginBottom: '16px'}}>
+                                    * Cambiar la fecha de inicio recalculará automáticamente la fecha de caducidad.
+                                </p>
+                            </>
+                        )}
 
                         <div style={{display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px'}}>
-                            <button className="btn-outline" onClick={() => setEditingCustomer(null)}>Cancelar</button>
-                            <button className="btn-primary" onClick={handleSaveEdit}>Guardar Cambios</button>
+                            <button className="btn-outline" onClick={() => setEditingCustomer(null)} disabled={isSaving}>Cancelar</button>
+                            <button 
+                                className="btn-primary" 
+                                onClick={handleSaveEdit} 
+                                disabled={isSaving || (!editName || !editDoc)}
+                            >
+                                {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                            </button>
                         </div>
                     </div>
                 </div>

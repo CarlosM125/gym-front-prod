@@ -163,7 +163,9 @@ export default function ClientRegistryScreen() {
                             >
                                 <div>
                                     <h4 style={{margin: '0 0 4px 0'}}>{p.name}</h4>
-                                    <span className="text-muted" style={{fontSize: '0.85rem'}}>{p.durationDays} días</span>
+                                    <span className="text-muted" style={{fontSize: '0.85rem'}}>
+                                        {p.durationMonths} {p.durationMonths === 1 ? 'mes' : 'meses'}
+                                    </span>
                                 </div>
                                 <div style={{fontSize: '1.2rem', fontWeight: 'bold'}}>${p.priceAmount}</div>
                             </div>

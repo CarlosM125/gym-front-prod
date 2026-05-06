@@ -25,7 +25,7 @@ export interface MembershipPlan {
     name: string;
     description: string;
     priceAmount: number;
-    durationDays: number;
+    durationMonths: number;
     isPromotion: boolean;
 }
 
@@ -40,6 +40,7 @@ interface MembershipState {
     fetchExpiring: (fromDate: string, toDate: string) => Promise<void>;
     fetchHistoricalStats: (year: number) => Promise<void>;
     renewMembership: (payload: { customerId?: number; documentId?: string; customerFullName: string; branchId?: number; planId?: number; amountPaid: number; startDate: string; }) => Promise<boolean>;
+    updateMembershipStartDate: (customerId: number, startDate: string) => Promise<boolean>;
 }
 
 export const useMembershipStore = create<MembershipState>((set) => ({
@@ -108,6 +109,23 @@ export const useMembershipStore = create<MembershipState>((set) => ({
             }
         } catch (error: any) {
             set({ error: error.response?.data?.message || 'Error renewing membership', isLoading: false });
+            return false;
+        }
+    },
+
+    updateMembershipStartDate: async (customerId: number, startDate: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await apiClient.put<ApiResponse<Membership>>(`/memberships/customer/${customerId}/start-date`, { startDate });
+            if (response.data.success) {
+                set({ isLoading: false });
+                return true;
+            } else {
+                set({ error: response.data.message, isLoading: false });
+                return false;
+            }
+        } catch (error: any) {
+            set({ error: error.response?.data?.message || 'Error updating start date', isLoading: false });
             return false;
         }
     }
