@@ -136,7 +136,7 @@ export default function MembershipPOSScreen() {
                                 <option value="">Seleccione un Plan</option>
                                 {plans.map(p => (
                                     <option key={p.id} value={p.id}>
-                                        {p.name} - ${p.priceAmount} ({p.durationDays} días)
+                                        {p.name} - ${p.priceAmount} ({p.durationMonths} {p.durationMonths === 1 ? 'mes' : 'meses'})
                                     </option>
                                 ))}
                             </select>

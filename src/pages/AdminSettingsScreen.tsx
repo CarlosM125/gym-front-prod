@@ -75,7 +75,7 @@ export default function AdminSettingsScreen() {
         try {
             await apiClient.post('/memberships/plans', {
                 name: newPlanName,
-                durationDays: Number(newPlanDuration),
+                durationMonths: Number(newPlanDuration),
                 priceAmount: Number(newPlanPrice),
                 description: newPlanDescription,
                 isPromotion: newPlanIsPromo
@@ -124,7 +124,7 @@ export default function AdminSettingsScreen() {
                         <h3 style={{marginTop: 0, marginBottom: '16px'}}>Crear Nuevo Plan</h3>
                         <input className="form-input" placeholder="Nombre del Plan (Ej. Mensualidad)" value={newPlanName} onChange={e=>setNewPlanName(e.target.value)} />
                         <input className="form-input" placeholder="Descripción breve" value={newPlanDescription} onChange={e=>setNewPlanDescription(e.target.value)} />
-                        <input className="form-input" type="number" placeholder="Duración en Días (Ej. 30)" value={newPlanDuration} onChange={e=>setNewPlanDuration(e.target.value)} />
+                        <input className="form-input" type="number" placeholder="Duración en Meses (Ej. 1)" value={newPlanDuration} onChange={e=>setNewPlanDuration(e.target.value)} />
                         <input className="form-input" type="number" placeholder="Precio Base (Ej. 35.00)" value={newPlanPrice} onChange={e=>setNewPlanPrice(e.target.value)} />
                         <label style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px'}}>
                             <input type="checkbox" checked={newPlanIsPromo} onChange={e=>setNewPlanIsPromo(e.target.checked)} />
@@ -155,7 +155,7 @@ export default function AdminSettingsScreen() {
                                                 </span>
                                             </td>
                                             <td>
-                                                <div>{p.durationDays} días</div>
+                                                <div>{p.durationMonths} {p.durationMonths === 1 ? 'mes' : 'meses'}</div>
                                                 <div style={{color: 'green', fontWeight: 'bold'}}>${p.priceAmount}</div>
                                             </td>
                                         </tr>
