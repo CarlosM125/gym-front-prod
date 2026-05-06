@@ -39,7 +39,7 @@ interface MembershipState {
     fetchExpiringToday: () => Promise<void>;
     fetchExpiring: (fromDate: string, toDate: string) => Promise<void>;
     fetchHistoricalStats: (year: number) => Promise<void>;
-    renewMembership: (payload: { customerId?: number; documentId?: string; customerFullName: string; branchId?: number; planId?: number; amountPaid: number; startDate: string; }) => Promise<boolean>;
+    renewMembership: (payload: { customerId?: number; documentId?: string; customerFullName: string; branchId?: number; planId?: number; amountPaid: number; startDate: string; consentGiven?: boolean; }) => Promise<boolean>;
     updateMembershipStartDate: (customerId: number, startDate: string) => Promise<boolean>;
 }
 

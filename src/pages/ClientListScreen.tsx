@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { useCustomerStore } from '../store/customerStore';
 import { useMembershipStore } from '../store/membershipStore';
-import { Edit2, X, Search, Upload } from 'lucide-react';
+import { Edit2, X, Search, Upload, Trash2 } from 'lucide-react';
 import { apiClient } from '../api/client';
+import { compressImage } from '../utils/imageCompressor';
 
 export default function ClientListScreen() {
     const { customers, fetchCustomers, isLoading, updateCustomer } = useCustomerStore();
@@ -84,9 +85,10 @@ export default function ClientListScreen() {
         let finalImageUrl = editingCustomer.profileImageUrl;
 
         if (selectedImage) {
-            const formData = new FormData();
-            formData.append("file", selectedImage);
             try {
+                const compressedImage = await compressImage(selectedImage, 800, 0.7);
+                const formData = new FormData();
+                formData.append("file", compressedImage);
                 const imgRes = await apiClient.post<{success: boolean, data: {url: string}}>("/users/upload-image", formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
@@ -124,6 +126,25 @@ export default function ClientListScreen() {
             fetchCustomers(); // Refresh to get recalculated end dates
         } else {
             alert("Hubo un problema al actualizar algunos datos.");
+        }
+    };
+
+    const handleDeleteCustomer = async () => {
+        if (!editingCustomer) return;
+        if (confirm("¿Estás seguro de ELIMINAR este cliente?\nEsta acción anonimizará sus datos y borrará su foto para cumplir con la ley de protección de datos. Es irreversible.")) {
+            setIsSaving(true);
+            try {
+                const res = await apiClient.delete(`/customers/${editingCustomer.id}`);
+                if (res.data.success) {
+                    alert("Cliente eliminado exitosamente según la LOPDP.");
+                    setEditingCustomer(null);
+                    fetchCustomers();
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Hubo un error al eliminar el cliente.");
+            }
+            setIsSaving(false);
         }
     };
 
@@ -262,15 +283,27 @@ export default function ClientListScreen() {
                             </>
                         )}
 
-                        <div style={{display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px'}}>
-                            <button className="btn-outline" onClick={() => setEditingCustomer(null)} disabled={isSaving}>Cancelar</button>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border-color)'}}>
                             <button 
-                                className="btn-primary" 
-                                onClick={handleSaveEdit} 
-                                disabled={isSaving || (!editName || !editDoc)}
+                                className="btn-outline" 
+                                style={{borderColor: 'red', color: 'red', padding: '8px 12px', fontSize: '0.85rem'}} 
+                                onClick={handleDeleteCustomer} 
+                                disabled={isSaving}
                             >
-                                {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                                <Trash2 size={14} style={{display: 'inline', marginRight: '4px', verticalAlign: 'middle'}}/>
+                                Eliminar (LOPDP)
                             </button>
+                            
+                            <div style={{display: 'flex', gap: '8px'}}>
+                                <button className="btn-outline" onClick={() => setEditingCustomer(null)} disabled={isSaving}>Cancelar</button>
+                                <button 
+                                    className="btn-primary" 
+                                    onClick={handleSaveEdit} 
+                                    disabled={isSaving || (!editName || !editDoc)}
+                                >
+                                    {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

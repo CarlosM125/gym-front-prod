@@ -18,6 +18,7 @@ export interface Customer {
     currentStartDate?: string;
     currentEndDate?: string;
     membershipStatus?: string;
+    consentGiven?: boolean;
 }
 
 interface CustomerState {

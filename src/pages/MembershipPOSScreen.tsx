@@ -17,6 +17,7 @@ export default function MembershipPOSScreen() {
     const [planId, setPlanId] = useState("");
     const [customerName, setCustomerName] = useState("");
     const [transactionDate, setTransactionDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [consentGiven, setConsentGiven] = useState(false);
 
     useEffect(() => { 
         fetchBranches();
@@ -50,6 +51,7 @@ export default function MembershipPOSScreen() {
 
     const handlePayment = async () => {
         if (!customerName || !docId || !branchId || !planId) return alert("Nombre, Cédula, Sucursal y Plan son obligatorios");
+        if (!consentGiven) return alert("Debe aceptar la política de privacidad LOPDP");
         
         const selectedPlan = plans.find(p => p.id === Number(planId));
         
@@ -59,7 +61,8 @@ export default function MembershipPOSScreen() {
             branchId: branchId ? Number(branchId) : undefined,
             planId: Number(planId),
             amountPaid: selectedPlan ? selectedPlan.priceAmount : 0,
-            startDate: transactionDate
+            startDate: transactionDate,
+            consentGiven
         };
 
         const success = await renewMembership(payload);
@@ -142,12 +145,25 @@ export default function MembershipPOSScreen() {
                             </select>
                         </div>
 
+                        <div style={{display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '16px'}}>
+                            <input 
+                                type="checkbox" 
+                                id="consent-pos" 
+                                checked={consentGiven} 
+                                onChange={e => setConsentGiven(e.target.checked)} 
+                                style={{marginTop: '4px'}}
+                            />
+                            <label htmlFor="consent-pos" style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>
+                                Acepta la política de datos personales (LOPDP). *
+                            </label>
+                        </div>
+
                         <div style={{paddingTop: '16px', borderTop: '1px solid var(--border-color)', display:'flex', justifyContent:'flex-end'}}>
                             <button 
                                 className="btn-primary" 
                                 onClick={handlePayment} 
-                                disabled={isLoading || !customerName || !docId || !branchId || !planId}
-                                style={{ opacity: (!customerName || !docId || !branchId || !planId) ? 0.6 : 1 }}
+                                disabled={isLoading || !customerName || !docId || !branchId || !planId || !consentGiven}
+                                style={{ opacity: (!customerName || !docId || !branchId || !planId || !consentGiven) ? 0.6 : 1 }}
                             >
                                 {isLoading ? 'Procesando...' : 'Registrar Membresía'}
                             </button>

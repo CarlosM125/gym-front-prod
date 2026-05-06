@@ -4,6 +4,7 @@ import { useBranchStore } from '../store/branchStore';
 import { useMembershipStore } from '../store/membershipStore';
 import { Upload, User, Mail, Calendar } from 'lucide-react';
 import { apiClient } from '../api/client';
+import { compressImage } from '../utils/imageCompressor';
 import { useNavigate } from 'react-router-dom';
 
 export default function ClientRegistryScreen() {
@@ -22,6 +23,8 @@ export default function ClientRegistryScreen() {
     const [branchId, setBranchId] = useState("");
     const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
     const [transactionDate, setTransactionDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [consentGiven, setConsentGiven] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         fetchBranches();
@@ -38,13 +41,16 @@ export default function ClientRegistryScreen() {
 
     const handleRegister = async () => {
         if (!fullName || !docId || !branchId || !selectedPlanId) return alert("Nombre, Cédula, Sucursal y Plan son obligatorios");
+        if (!consentGiven) return alert("Debe aceptar la política de privacidad");
         
+        setIsSubmitting(true);
         const selectedPlan = plans.find(p => p.id === selectedPlanId);
         let finalImageUrl = "";
         if (selectedImage) {
-            const formData = new FormData();
-            formData.append("file", selectedImage);
             try {
+                const compressedImage = await compressImage(selectedImage, 800, 0.7);
+                const formData = new FormData();
+                formData.append("file", compressedImage);
                 const imgRes = await apiClient.post<{success: boolean, data: {url: string}}>("/users/upload-image", formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
@@ -54,6 +60,8 @@ export default function ClientRegistryScreen() {
             } catch (e) {
                 console.error("Backend image upload error", e);
                 alert("Error al subir foto de perfil");
+                setIsSubmitting(false);
+                return;
             }
         }
 
@@ -63,7 +71,8 @@ export default function ClientRegistryScreen() {
             fullName, 
             email: email || undefined, 
             homeBranchId: branchId ? Number(branchId) : undefined,
-            profileImageUrl: finalImageUrl || undefined
+            profileImageUrl: finalImageUrl || undefined,
+            consentGiven
         });
 
         if (customer) {
@@ -85,6 +94,7 @@ export default function ClientRegistryScreen() {
                 alert("Cliente registrado, pero hubo un error creando la membresía.");
             }
         }
+        setIsSubmitting(false);
     };
 
     return (
@@ -174,15 +184,28 @@ export default function ClientRegistryScreen() {
                 </div>
             </div>
 
-            <div style={{display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '32px', borderTop: '1px solid var(--border-color)', paddingTop: '20px'}}>
-                <button className="btn-outline" onClick={() => navigate('/dashboard')}>Cancelar</button>
+            <div style={{display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '20px'}}>
+                <input 
+                    type="checkbox" 
+                    id="consent" 
+                    checked={consentGiven} 
+                    onChange={e => setConsentGiven(e.target.checked)} 
+                    style={{marginTop: '4px'}}
+                />
+                <label htmlFor="consent" style={{fontSize: '0.9rem', color: 'var(--text-muted)'}}>
+                    El cliente acepta la política de tratamiento de datos personales y uso de imagen para la gestión interna del gimnasio según la Ley Orgánica de Protección de Datos Personales (LOPDP). *
+                </label>
+            </div>
+
+            <div style={{display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '20px'}}>
+                <button className="btn-outline" onClick={() => navigate('/dashboard')} disabled={isSubmitting || isLoading}>Cancelar</button>
                 <button 
                     className="btn-primary" 
                     onClick={handleRegister} 
-                    disabled={isLoading || !fullName || !docId || !branchId || !selectedPlanId}
-                    style={{ opacity: (!fullName || !docId || !branchId || !selectedPlanId) ? 0.6 : 1 }}
+                    disabled={isSubmitting || isLoading || !fullName || !docId || !branchId || !selectedPlanId || !consentGiven}
+                    style={{ opacity: (!fullName || !docId || !branchId || !selectedPlanId || !consentGiven) ? 0.6 : 1 }}
                 >
-                    {isLoading ? 'Guardando...' : 'Crear Membresía y Cliente'}
+                    {isSubmitting || isLoading ? 'Guardando...' : 'Crear Membresía y Cliente'}
                 </button>
             </div>
         </div>
