@@ -86,7 +86,8 @@ export default function ClientListScreen() {
 
         if (selectedImage) {
             try {
-                const compressedImage = await compressImage(selectedImage, 800, 0.7);
+                // Resize to max 400px and 60% quality to save Cloudinary space
+                const compressedImage = await compressImage(selectedImage, 400, 0.6);
                 const formData = new FormData();
                 formData.append("file", compressedImage);
                 const imgRes = await apiClient.post<{success: boolean, data: {url: string}}>("/users/upload-image", formData, {
