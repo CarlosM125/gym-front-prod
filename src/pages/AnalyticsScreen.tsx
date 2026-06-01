@@ -74,15 +74,16 @@ function ProposalCard({ proposal }: { proposal: MarketingProposal }) {
 }
 
 export default function AnalyticsScreen() {
-    const { historicalStats, fetchHistoricalStats } = useMembershipStore();
-    const { proposals, isLoading, isRunning, lastRun, fetchProposals, triggerAnalysis } = useMarketingStore();
+    const { historicalStats, dashboardStats, fetchHistoricalStats, fetchDashboardStats } = useMembershipStore();
+    const { proposals, isLoading: marketingLoading, isRunning, lastRun, fetchProposals, triggerAnalysis } = useMarketingStore();
     const [triggerMsg, setTriggerMsg] = useState('');
 
     useEffect(() => {
         const currentYear = new Date().getFullYear();
         fetchHistoricalStats(currentYear);
+        fetchDashboardStats();
         fetchProposals();
-    }, [fetchHistoricalStats, fetchProposals]);
+    }, [fetchHistoricalStats, fetchDashboardStats, fetchProposals]);
 
     const handleTrigger = async () => {
         setTriggerMsg('');
@@ -90,15 +91,12 @@ export default function AnalyticsScreen() {
         setTriggerMsg(msg);
     };
 
-    // Calcular datos sumarios
-    const totalRevenue = historicalStats.reduce((sum, item) => sum + item.revenue, 0);
-    const avgRevenue = historicalStats.length > 0 ? (totalRevenue / historicalStats.length).toFixed(0) : 0;
-
-    const pieDataMock = [
-        { name: 'Básica',   value: totalRevenue * 0.224, clients: 3, percentage: '22.4%' },
-        { name: 'Premium',  value: totalRevenue * 0.239, clients: 2, percentage: '23.9%' },
-        { name: 'VIP',      value: totalRevenue * 0.537, clients: 3, percentage: '53.7%' }
-    ];
+    // Calcular datos sumarios usando dashboardStats
+    const totalRevenue = dashboardStats?.totalRevenue || 0;
+    const avgRevenue = dashboardStats?.averageRevenuePerCustomer || 0;
+    const activeCustomers = dashboardStats?.activeCustomers || 0;
+    const monthlyRevenue = dashboardStats?.monthlyRevenue || 0;
+    const planDistribution = dashboardStats?.planDistribution || [];
 
     const lastRunFormatted = lastRun
         ? new Date(lastRun).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -116,15 +114,15 @@ export default function AnalyticsScreen() {
                         <DollarSign size={18} style={{ color: 'white', background: 'var(--primary-color)', borderRadius: '4px', padding: '2px' }} />
                         <b>Ingresos del Mes</b>
                     </div>
-                    <h2 style={{ margin: '0', fontSize: '2rem' }}>${(historicalStats.find(s => s.month === 'Apr')?.revenue || 0)}</h2>
-                    <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Último mes registrado</p>
+                    <h2 style={{ margin: '0', fontSize: '2rem' }}>${monthlyRevenue.toFixed(0)}</h2>
+                    <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Mes actual en curso</p>
                 </div>
                 <div className="card" style={{ margin: 0 }}>
                     <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                         <Users size={18} style={{ color: 'white', background: '#000', borderRadius: '4px', padding: '2px' }} />
                         <b>Clientes Activos</b>
                     </div>
-                    <h2 style={{ margin: '0', fontSize: '2rem' }}>8</h2>
+                    <h2 style={{ margin: '0', fontSize: '2rem' }}>{activeCustomers}</h2>
                     <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Membresías vigentes</p>
                 </div>
                 <div className="card" style={{ margin: 0 }}>
@@ -132,7 +130,7 @@ export default function AnalyticsScreen() {
                         <TrendingUp size={18} style={{ color: 'white', background: '#000', borderRadius: '4px', padding: '2px' }} />
                         <b>Ingreso Total</b>
                     </div>
-                    <h2 style={{ margin: '0', fontSize: '2rem' }}>${totalRevenue}</h2>
+                    <h2 style={{ margin: '0', fontSize: '2rem' }}>${totalRevenue.toFixed(0)}</h2>
                     <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Todas las membresías</p>
                 </div>
                 <div className="card" style={{ margin: 0 }}>
@@ -140,8 +138,8 @@ export default function AnalyticsScreen() {
                         <CreditCard size={18} style={{ color: 'white', background: '#000', borderRadius: '4px', padding: '2px' }} />
                         <b>Promedio</b>
                     </div>
-                    <h2 style={{ margin: '0', fontSize: '2rem' }}>${avgRevenue}</h2>
-                    <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Por cliente</p>
+                    <h2 style={{ margin: '0', fontSize: '2rem' }}>${avgRevenue.toFixed(0)}</h2>
+                    <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Por cliente histórico</p>
                 </div>
             </div>
 
@@ -151,12 +149,12 @@ export default function AnalyticsScreen() {
                     <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Ingresos por Tipo de Membresía</h3>
                     <div style={{ flex: 1, width: '100%', minHeight: '250px' }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={pieDataMock} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                            <BarChart data={planDistribution} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} />
                                 <YAxis axisLine={false} tickLine={false} width={50} />
                                 <Tooltip cursor={{ fill: 'var(--bg-color)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                                <Bar dataKey="value" fill="var(--primary-color)" radius={[4, 4, 0, 0]} barSize={60} />
+                                <Bar dataKey="revenue" fill="var(--primary-color)" radius={[4, 4, 0, 0]} barSize={60} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -165,7 +163,7 @@ export default function AnalyticsScreen() {
                 <div className="card">
                     <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Distribución de Membresías</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        {pieDataMock.map(item => (
+                        {planDistribution.map(item => (
                             <div key={item.name}>
                                 <div className="flex-between" style={{ marginBottom: '8px' }}>
                                     <span style={{ fontWeight: '500' }}>{item.name}</span>
@@ -175,7 +173,7 @@ export default function AnalyticsScreen() {
                                     <div style={{ width: item.percentage, height: '100%', backgroundColor: 'var(--primary-color)', borderRadius: '4px' }}></div>
                                 </div>
                                 <div className="flex-between" style={{ marginTop: '8px', fontSize: '0.9rem' }}>
-                                    <span className="text-muted">${item.value.toFixed(0)}</span>
+                                    <span className="text-muted">${item.revenue.toFixed(0)}</span>
                                     <span className="text-muted">{item.percentage}</span>
                                 </div>
                             </div>
@@ -235,7 +233,7 @@ export default function AnalyticsScreen() {
                     </div>
                 </div>
 
-                {isLoading ? (
+                {marketingLoading ? (
                     <p className="text-muted" style={{ textAlign: 'center', padding: '40px' }}>Cargando propuestas...</p>
                 ) : proposals.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>

@@ -29,16 +29,33 @@ export interface MembershipPlan {
     isPromotion: boolean;
 }
 
+export interface PlanDistribution {
+    name: string;
+    clients: number;
+    revenue: number;
+    percentage: string;
+}
+
+export interface DashboardStats {
+    activeCustomers: number;
+    totalRevenue: number;
+    averageRevenuePerCustomer: number;
+    monthlyRevenue: number;
+    planDistribution: PlanDistribution[];
+}
+
 interface MembershipState {
     plans: MembershipPlan[];
     expiringToday: Membership[];
     historicalStats: ChartData[];
+    dashboardStats: DashboardStats | null;
     isLoading: boolean;
     error: string | null;
     fetchPlans: () => Promise<void>;
     fetchExpiringToday: () => Promise<void>;
     fetchExpiring: (fromDate: string, toDate: string) => Promise<void>;
     fetchHistoricalStats: (year: number) => Promise<void>;
+    fetchDashboardStats: () => Promise<void>;
     renewMembership: (payload: { customerId?: number; documentId?: string; customerFullName: string; branchId?: number; planId?: number; amountPaid: number; startDate: string; consentGiven?: boolean; }) => Promise<boolean>;
     updateMembershipStartDate: (customerId: number, startDate: string) => Promise<boolean>;
 }
@@ -47,6 +64,7 @@ export const useMembershipStore = create<MembershipState>((set) => ({
     plans: [],
     expiringToday: [],
     historicalStats: [],
+    dashboardStats: null,
     isLoading: false,
     error: null,
 
@@ -90,6 +108,18 @@ export const useMembershipStore = create<MembershipState>((set) => ({
             const response = await apiClient.get<ApiResponse<ChartData[]>>(`/memberships/historical-stats?year=${year}`);
             if (response.data.success) {
                 set({ historicalStats: response.data.data, isLoading: false });
+            }
+        } catch (error: any) {
+            set({ error: error.message, isLoading: false });
+        }
+    },
+
+    fetchDashboardStats: async () => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await apiClient.get<ApiResponse<DashboardStats>>('/memberships/dashboard-stats');
+            if (response.data.success) {
+                set({ dashboardStats: response.data.data, isLoading: false });
             }
         } catch (error: any) {
             set({ error: error.message, isLoading: false });
