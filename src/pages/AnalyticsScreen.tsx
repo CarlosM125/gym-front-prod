@@ -1,77 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useMembershipStore } from '../store/membershipStore';
-import { useMarketingStore, MarketingProposal } from '../store/marketingStore';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { DollarSign, Users, TrendingUp, CreditCard, Sparkles, RefreshCw, AlertCircle, CheckCircle, Target, Megaphone, Lightbulb } from 'lucide-react';
+import { useMarketingStore } from '../store/marketingStore';
+import { 
+    AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
+    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+} from 'recharts';
+import { DollarSign, Users, TrendingUp, CreditCard, RefreshCw, CheckCircle, Lightbulb, Activity, UserPlus } from 'lucide-react';
 
-const TIPO_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-    'promocion':          { label: 'Promoción',       color: '#d62020', icon: <Target size={14} /> },
-    'campaña_marketing':  { label: 'Campaña',         color: '#2563eb', icon: <Megaphone size={14} /> },
-    'consejo_retencion':  { label: 'Retención',       color: '#d97706', icon: <AlertCircle size={14} /> },
-    'estrategia':         { label: 'Estrategia',      color: '#16a34a', icon: <Lightbulb size={14} /> },
-};
 
-const ESTADO_CONFIG: Record<string, { label: string; color: string }> = {
-    'pendiente':   { label: 'Pendiente',   color: '#6b7280' },
-    'en_progreso': { label: 'En progreso', color: '#2563eb' },
-    'completada':  { label: 'Completada',  color: '#16a34a' },
-    'descartada':  { label: 'Descartada',  color: '#ef4444' },
-};
 
-function ProposalCard({ proposal }: { proposal: MarketingProposal }) {
-    const tipo = TIPO_CONFIG[proposal.tipo] || TIPO_CONFIG['estrategia'];
-    const estado = ESTADO_CONFIG[proposal.estado] || ESTADO_CONFIG['pendiente'];
-    const fecha = proposal.fechaGeneracion
-        ? new Date(proposal.fechaGeneracion).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-        : '';
+const COLORS = ['#d62020', '#2563eb', '#d97706', '#16a34a', '#8b5cf6', '#ec4899'];
 
-    return (
-        <div style={{
-            border: '1px solid var(--border-color)',
-            borderLeft: `4px solid ${tipo.color}`,
-            borderRadius: '8px',
-            padding: '16px',
-            backgroundColor: 'var(--card-bg)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px'
-        }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{proposal.titulo}</h4>
-                <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                    <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '4px',
-                        padding: '2px 8px', borderRadius: '99px', fontSize: '0.75rem',
-                        backgroundColor: tipo.color + '18', color: tipo.color, fontWeight: 500
-                    }}>
-                        {tipo.icon} {tipo.label}
-                    </span>
-                    <span style={{
-                        padding: '2px 8px', borderRadius: '99px', fontSize: '0.75rem',
-                        backgroundColor: estado.color + '18', color: estado.color, fontWeight: 500
-                    }}>
-                        {estado.label}
-                    </span>
-                </div>
-            </div>
 
-            <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                {proposal.descripcion}
-            </p>
-
-            {proposal.acciones && (
-                <div style={{ backgroundColor: 'var(--bg-color)', borderRadius: '6px', padding: '10px 12px' }}>
-                    <p style={{ margin: '0 0 4px 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Acciones</p>
-                    <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.6 }}>{proposal.acciones}</p>
-                </div>
-            )}
-
-            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Generado: {fecha}
-            </p>
-        </div>
-    );
-}
 
 export default function AnalyticsScreen() {
     const { dashboardStats, fetchDashboardStats, plans, fetchPlans } = useMembershipStore();
@@ -110,7 +50,7 @@ export default function AnalyticsScreen() {
         setTriggerMsg(msg);
     };
 
-    // Calcular datos sumarios usando dashboardStats
+    // Calcular datos sumarios
     const totalRevenue = dashboardStats?.totalRevenue || 0;
     const avgRevenue = dashboardStats?.averageRevenuePerCustomer || 0;
     const activeCustomers = dashboardStats?.activeCustomers || 0;
@@ -118,174 +58,245 @@ export default function AnalyticsScreen() {
     const planDistribution = dashboardStats?.planDistribution || [];
     const historicalStats = dashboardStats?.historicalStats || [];
 
+    // Nuevas membresías (del mes actual)
+    const currentMonthData = historicalStats.length > 0 ? historicalStats[new Date().getMonth()] : null;
+    const newSignups = currentMonthData ? currentMonthData.signups : 0;
+
     const lastRunFormatted = lastRun
         ? new Date(lastRun).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
         : 'Nunca';
 
     return (
-        <div style={{ display: 'flex', gap: '24px', flexDirection: 'row', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '20px', flexDirection: 'row', flexWrap: 'wrap' }}>
             {/* ── Columna Izquierda: Filtros ── */}
-            <div style={{ width: '260px', flexShrink: 0 }}>
-                <div className="card" style={{ position: 'sticky', top: '24px' }}>
-                    <div className="flex-between" style={{ marginBottom: '20px' }}>
-                        <h3 style={{ margin: 0, fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Filtros</h3>
-                        <button 
-                            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '0.8rem' }}
-                            onClick={() => {
-                                setFilters({ startDate: '', endDate: '', branchId: '', planId: '', status: '' });
-                                fetchDashboardStats();
-                            }}
-                        >
-                            Limpiar
+            <div style={{ width: '250px', flexShrink: 0 }}>
+                <div style={{ position: 'sticky', top: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                        <Activity size={24} style={{ color: 'var(--primary-color)' }} />
+                        <div>
+                            <h2 style={{ margin: 0, fontSize: '1.2rem', lineHeight: '1.2' }}>GYM ANALYTICS</h2>
+                            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Dashboard Ejecutivo</p>
+                        </div>
+                    </div>
+
+                    <div className="card" style={{ padding: '20px', background: 'var(--card-bg)' }}>
+                        <div className="flex-between" style={{ marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+                            <h3 style={{ margin: 0, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)' }}>Filtros</h3>
+                            <button 
+                                style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+                                onClick={() => {
+                                    setFilters({ startDate: '', endDate: '', branchId: '', planId: '', status: '' });
+                                    fetchDashboardStats();
+                                }}
+                            >
+                                Limpiar filtros
+                            </button>
+                        </div>
+
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Rango de Fechas (Desde)</label>
+                            <input type="date" className="form-input" style={{ marginBottom: 0, padding: '8px', fontSize: '0.85rem' }} value={filters.startDate} onChange={e => setFilters({...filters, startDate: e.target.value})} />
+                        </div>
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Rango de Fechas (Hasta)</label>
+                            <input type="date" className="form-input" style={{ marginBottom: 0, padding: '8px', fontSize: '0.85rem' }} value={filters.endDate} onChange={e => setFilters({...filters, endDate: e.target.value})} />
+                        </div>
+
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Plan</label>
+                            <select className="form-input" style={{ marginBottom: 0, padding: '8px', fontSize: '0.85rem' }} value={filters.planId} onChange={e => setFilters({...filters, planId: e.target.value})}>
+                                <option value="">Todos</option>
+                                {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                        </div>
+
+                        <div style={{ marginBottom: '24px' }}>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Estado Membresía</label>
+                            <select className="form-input" style={{ marginBottom: 0, padding: '8px', fontSize: '0.85rem' }} value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})}>
+                                <option value="">Activa</option>
+                                <option value="EXPIRED">Vencida</option>
+                                <option value="CANCELLED">Cancelada</option>
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+
+                        <button className="btn-primary" style={{ width: '100%', padding: '12px', fontSize: '0.9rem' }} onClick={handleApplyFilters}>
+                            Aplicar Filtros
                         </button>
                     </div>
-
-                    <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: 500 }}>Fecha Desde</label>
-                        <input type="date" className="form-input" style={{ marginBottom: 0 }} value={filters.startDate} onChange={e => setFilters({...filters, startDate: e.target.value})} />
-                    </div>
-                    <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: 500 }}>Fecha Hasta</label>
-                        <input type="date" className="form-input" style={{ marginBottom: 0 }} value={filters.endDate} onChange={e => setFilters({...filters, endDate: e.target.value})} />
-                    </div>
-
-                    <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: 500 }}>Plan</label>
-                        <select className="form-input" style={{ marginBottom: 0 }} value={filters.planId} onChange={e => setFilters({...filters, planId: e.target.value})}>
-                            <option value="">Todos</option>
-                            {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                    </div>
-
-                    <div style={{ marginBottom: '24px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: 500 }}>Estado Membresía</label>
-                        <select className="form-input" style={{ marginBottom: 0 }} value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})}>
-                            <option value="">Todos</option>
-                            <option value="ACTIVE">Activa</option>
-                            <option value="EXPIRED">Vencida</option>
-                            <option value="CANCELLED">Cancelada</option>
-                        </select>
-                    </div>
-
-                    <button className="btn-primary" style={{ width: '100%' }} onClick={handleApplyFilters}>
-                        Aplicar Filtros
-                    </button>
                 </div>
             </div>
 
             {/* ── Columna Derecha: Contenido ── */}
             <div style={{ flex: 1, minWidth: '0' }}>
-                <div style={{ marginBottom: '24px' }}>
-                    <h1 className="page-title" style={{ margin: '0 0 4px 0' }}>Análisis Financiero</h1>
-                    <p className="page-subtitle" style={{ margin: 0 }}>Vista general del rendimiento del gimnasio</p>
+                <div style={{ marginBottom: '20px' }}>
+                    <h2 style={{ margin: '0 0 4px 0', fontSize: '1.4rem' }}>Resumen General</h2>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Vista general del rendimiento del gimnasio</p>
                 </div>
 
-                {/* Top Cards */}
-                <div className="grid-cols-4" style={{ marginBottom: '24px' }}>
-                    <div className="card" style={{ margin: 0 }}>
-                        <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                            <DollarSign size={18} style={{ color: 'white', background: 'var(--primary-color)', borderRadius: '4px', padding: '2px' }} />
-                            <b>Ingresos del Mes</b>
+                {/* 5 Top Cards Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '20px' }}>
+                    <div className="card" style={{ margin: 0, padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex-between">
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Ingresos Totales</span>
+                            <div style={{ background: '#8b5cf620', padding: '6px', borderRadius: '50%', color: '#8b5cf6' }}><DollarSign size={16} /></div>
                         </div>
-                        <h2 style={{ margin: '0', fontSize: '2rem' }}>${monthlyRevenue.toFixed(0)}</h2>
-                        <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Mes actual en curso</p>
+                        <h3 style={{ margin: 0, fontSize: '1.6rem' }}>${totalRevenue.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</h3>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Histórico</span>
                     </div>
-                    <div className="card" style={{ margin: 0 }}>
-                        <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                            <Users size={18} style={{ color: 'white', background: '#000', borderRadius: '4px', padding: '2px' }} />
-                            <b>Clientes Activos</b>
-                        </div>
-                        <h2 style={{ margin: '0', fontSize: '2rem' }}>{activeCustomers}</h2>
-                        <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Membresías vigentes</p>
-                    </div>
-                    <div className="card" style={{ margin: 0 }}>
-                        <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                            <TrendingUp size={18} style={{ color: 'white', background: '#000', borderRadius: '4px', padding: '2px' }} />
-                            <b>Ingreso Total</b>
-                        </div>
-                        <h2 style={{ margin: '0', fontSize: '2rem' }}>${totalRevenue.toFixed(0)}</h2>
-                        <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Periodo seleccionado</p>
-                    </div>
-                    <div className="card" style={{ margin: 0 }}>
-                        <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                            <CreditCard size={18} style={{ color: 'white', background: '#000', borderRadius: '4px', padding: '2px' }} />
-                            <b>Ticket Promedio</b>
-                        </div>
-                        <h2 style={{ margin: '0', fontSize: '2rem' }}>${avgRevenue.toFixed(0)}</h2>
-                        <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Por cliente histórico</p>
-                    </div>
-                </div>
 
-            {/* Charts Section */}
-            <div className="grid-cols-2">
-                <div className="card" style={{ minHeight: '350px', display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Ingresos por Tipo de Membresía</h3>
-                    <div style={{ flex: 1, width: '100%', minHeight: '250px' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={planDistribution} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                                <YAxis axisLine={false} tickLine={false} width={50} />
-                                <Tooltip cursor={{ fill: 'var(--bg-color)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                                <Bar dataKey="revenue" fill="var(--primary-color)" radius={[4, 4, 0, 0]} barSize={60} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <div className="card" style={{ margin: 0, padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex-between">
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Ingresos del Mes</span>
+                            <div style={{ background: '#3b82f620', padding: '6px', borderRadius: '50%', color: '#3b82f6' }}><TrendingUp size={16} /></div>
+                        </div>
+                        <h3 style={{ margin: 0, fontSize: '1.6rem' }}>${monthlyRevenue.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</h3>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mes en curso</span>
+                    </div>
+
+                    <div className="card" style={{ margin: 0, padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex-between">
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Nuevas Membresías</span>
+                            <div style={{ background: '#10b98120', padding: '6px', borderRadius: '50%', color: '#10b981' }}><UserPlus size={16} /></div>
+                        </div>
+                        <h3 style={{ margin: 0, fontSize: '1.6rem' }}>{newSignups}</h3>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mes actual</span>
+                    </div>
+
+                    <div className="card" style={{ margin: 0, padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex-between">
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Membresías Activas</span>
+                            <div style={{ background: '#f59e0b20', padding: '6px', borderRadius: '50%', color: '#f59e0b' }}><Users size={16} /></div>
+                        </div>
+                        <h3 style={{ margin: 0, fontSize: '1.6rem' }}>{activeCustomers}</h3>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Clientes vigentes</span>
+                    </div>
+
+                    <div className="card" style={{ margin: 0, padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex-between">
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Ingreso Promedio</span>
+                            <div style={{ background: '#ec489920', padding: '6px', borderRadius: '50%', color: '#ec4899' }}><CreditCard size={16} /></div>
+                        </div>
+                        <h3 style={{ margin: 0, fontSize: '1.6rem' }}>${avgRevenue.toFixed(2)}</h3>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Por miembro</span>
                     </div>
                 </div>
 
-                <div className="card">
-                    <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Distribución de Membresías</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        {planDistribution.map(item => (
-                            <div key={item.name}>
-                                <div className="flex-between" style={{ marginBottom: '8px' }}>
-                                    <span style={{ fontWeight: '500' }}>{item.name}</span>
-                                    <span className="text-muted" style={{ fontSize: '0.9rem' }}>{item.clients} clientes</span>
+                {/* Middle Charts Section (Area Chart + Pie Chart) */}
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr', gap: '20px', marginBottom: '20px' }}>
+                    
+                    {/* Area Chart: Ingresos por Mes */}
+                    <div className="card" style={{ margin: 0, padding: '20px' }}>
+                        <div className="flex-between" style={{ marginBottom: '20px' }}>
+                            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Ingresos por Mes</h3>
+                        </div>
+                        <div style={{ width: '100%', height: '260px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={historicalStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="var(--primary-color)" stopOpacity={0.3}/>
+                                            <stop offset="95%" stopColor="var(--primary-color)" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
+                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} tickFormatter={(val) => `$${val/1000}k`} />
+                                    <Tooltip 
+                                        contentStyle={{ borderRadius: '8px', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                        formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Ingresos']}
+                                    />
+                                    <Area type="monotone" dataKey="revenue" stroke="var(--primary-color)" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Pie Chart: Distribución por Plan */}
+                    <div className="card" style={{ margin: 0, padding: '20px' }}>
+                        <h3 style={{ margin: '0 0 20px 0', fontSize: '1rem', fontWeight: 600 }}>Distribución de Ingresos por Plan</h3>
+                        <div style={{ width: '100%', height: '200px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={planDistribution}
+                                        innerRadius={60}
+                                        outerRadius={90}
+                                        paddingAngle={5}
+                                        dataKey="revenue"
+                                        stroke="none"
+                                    >
+                                        {planDistribution.map((_, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip formatter={(value: any) => `$${Number(value).toFixed(2)}`} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+                            {planDistribution.map((item, index) => (
+                                <div key={item.name} className="flex-between" style={{ fontSize: '0.85rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: COLORS[index % COLORS.length] }}></div>
+                                        <span style={{ color: 'var(--text-main)' }}>{item.name}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '16px' }}>
+                                        <span style={{ color: 'var(--text-muted)', width: '40px', textAlign: 'right' }}>{item.percentage}</span>
+                                        <span style={{ fontWeight: 600, width: '60px', textAlign: 'right' }}>${item.revenue.toLocaleString('en-US', {maximumFractionDigits: 0})}</span>
+                                    </div>
                                 </div>
-                                <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-color)', borderRadius: '4px' }}>
-                                    <div style={{ width: item.percentage, height: '100%', backgroundColor: 'var(--primary-color)', borderRadius: '4px' }}></div>
-                                </div>
-                                <div className="flex-between" style={{ marginTop: '8px', fontSize: '0.9rem' }}>
-                                    <span className="text-muted">${item.revenue.toFixed(0)}</span>
-                                    <span className="text-muted">{item.percentage}</span>
-                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bottom Charts Section (Horizontal Bar Chart) */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', marginBottom: '20px' }}>
+                    {/* Horizontal Bar Chart: Ingresos por Duración/Plan */}
+                    <div className="card" style={{ margin: 0, padding: '20px' }}>
+                        <h3 style={{ margin: '0 0 20px 0', fontSize: '1rem', fontWeight: 600 }}>Ingresos por Plan</h3>
+                        <div style={{ width: '100%', height: '280px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={planDistribution}
+                                    layout="vertical"
+                                    margin={{ top: 0, right: 30, left: 30, bottom: 0 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-color)" />
+                                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} tickFormatter={(val) => `$${val/1000}k`} />
+                                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-main)' }} width={100} />
+                                    <Tooltip 
+                                        cursor={{ fill: 'var(--bg-color)' }}
+                                        contentStyle={{ borderRadius: '8px', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                        formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Ingresos']}
+                                    />
+                                    <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={30}>
+                                        {planDistribution.map((_, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Sección del Agente IA (INSIGHTS) ──────────────────────────────────────── */}
+                <div className="card" style={{ margin: 0, padding: '24px', backgroundColor: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                            <div style={{ backgroundColor: '#c084fc', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <Lightbulb size={24} color="white" />
                             </div>
-                        ))}
-                        <div className="flex-between" style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
-                            <span style={{ fontWeight: '500' }}>Total Ingresos</span>
-                            <h3 style={{ margin: 0 }}>${totalRevenue.toFixed(0)}</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="card" style={{ marginTop: '32px' }}>
-                <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Ingreso Histórico Anualizado</h3>
-                <div style={{ width: '100%', height: '300px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={historicalStats}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="month" axisLine={false} tickLine={false} />
-                            <YAxis axisLine={false} tickLine={false} />
-                            <Tooltip cursor={{ fill: '#f0f0f0' }} />
-                            <Legend />
-                            <Bar dataKey="revenue" fill="#000" name="Ingresos Mensuales ($)" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-
-                {/* ── Sección del Agente IA ──────────────────────────────────────── */}
-                <div className="card" style={{ marginTop: '32px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                        <div>
-                            <h3 style={{ margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Sparkles size={20} style={{ color: 'var(--primary-color)' }} />
-                                INSIGHTS: Propuestas del Agente IA
-                            </h3>
-                            <p className="text-muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-                                Generadas automáticamente cada día a las 6:00 AM · Último análisis: <b>{lastRunFormatted}</b>
-                            </p>
+                            <div>
+                                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', color: '#6b21a8' }}>
+                                    INSIGHTS (Agente IA)
+                                </h3>
+                                <p style={{ margin: 0, fontSize: '0.85rem', color: '#9333ea' }}>
+                                    Generado automáticamente en base a tus datos · Último análisis: <b>{lastRunFormatted}</b>
+                                </p>
+                            </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             {triggerMsg && (
@@ -298,28 +309,30 @@ export default function AnalyticsScreen() {
                                 className="btn-outline"
                                 onClick={handleTrigger}
                                 disabled={isRunning}
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', borderColor: '#c084fc', color: '#6b21a8' }}
                             >
                                 <RefreshCw size={16} style={{ animation: isRunning ? 'spin 1s linear infinite' : 'none' }} />
-                                {isRunning ? 'Analizando...' : 'Ejecutar Análisis Ahora'}
+                                {isRunning ? 'Analizando...' : 'Recalcular'}
                             </button>
                         </div>
                     </div>
 
                     {marketingLoading ? (
-                        <p className="text-muted" style={{ textAlign: 'center', padding: '40px' }}>Cargando propuestas...</p>
+                        <p style={{ textAlign: 'center', padding: '20px', color: '#9333ea' }}>Analizando datos de la base de datos...</p>
                     ) : proposals.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                            <Sparkles size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />
-                            <p style={{ margin: 0 }}>Aún no hay propuestas generadas.</p>
-                            <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem' }}>
-                                El agente corre automáticamente a las 6 AM o puedes ejecutarlo ahora.
-                            </p>
+                        <div style={{ padding: '20px', color: '#9333ea' }}>
+                            <p style={{ margin: 0 }}>No hay estrategias generadas por el momento.</p>
                         </div>
                     ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
                             {proposals.slice(0, 3).map(p => (
-                                <ProposalCard key={p.id} proposal={p} />
+                                <div key={p.id} style={{ backgroundColor: 'white', borderRadius: '8px', padding: '16px', boxShadow: '0 2px 4px rgba(107, 33, 168, 0.05)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#a855f7' }}></div>
+                                        <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#4c1d95' }}>{p.titulo}</h4>
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280', lineHeight: 1.5 }}>{p.descripcion}</p>
+                                </div>
                             ))}
                         </div>
                     )}
@@ -328,12 +341,25 @@ export default function AnalyticsScreen() {
 
             <style>{`
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                @media (max-width: 1200px) {
+                    div[style*="grid-template-columns: repeat(5, 1fr)"] {
+                        grid-template-columns: repeat(3, 1fr) !important;
+                    }
+                }
                 @media (max-width: 1024px) {
-                    div[style*="display: 'flex', gap: '24px'"] {
+                    div[style*="display: 'flex', gap: '20px'"] {
                         flex-direction: column !important;
                     }
-                    div[style*="width: '260px'"] {
+                    div[style*="width: '250px'"] {
                         width: 100% !important;
+                    }
+                    div[style*="grid-template-columns: 2fr 1.2fr"] {
+                        grid-template-columns: 1fr !important;
+                    }
+                }
+                @media (max-width: 768px) {
+                    div[style*="grid-template-columns: repeat(3, 1fr)"] {
+                        grid-template-columns: repeat(2, 1fr) !important;
                     }
                 }
             `}</style>
