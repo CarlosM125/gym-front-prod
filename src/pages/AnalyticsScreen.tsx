@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMembershipStore } from '../store/membershipStore';
 import { useMarketingStore } from '../store/marketingStore';
 import { 
-    AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
+    AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 import { DollarSign, Users, TrendingUp, CreditCard, RefreshCw, CheckCircle, Lightbulb, Activity, UserPlus } from 'lucide-react';
@@ -61,6 +61,10 @@ export default function AnalyticsScreen() {
     // Nuevas membresías (del mes actual)
     const currentMonthData = historicalStats.length > 0 ? historicalStats[new Date().getMonth()] : null;
     const newSignups = currentMonthData ? currentMonthData.signups : 0;
+    
+    const topCustomers = dashboardStats?.topCustomers || [];
+    const keyMetrics = dashboardStats?.keyMetrics || { renewalRate: [], nonRenewalRate: [], newSignupsRate: [] };
+    const membershipAnalysis = dashboardStats?.membershipAnalysis || [];
 
     const lastRunFormatted = lastRun
         ? new Date(lastRun).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -280,6 +284,117 @@ export default function AnalyticsScreen() {
                             </ResponsiveContainer>
                         </div>
                     </div>
+                </div>
+
+                {/* Third Row: Top 10 Clientes & Métricas Clave */}
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                    {/* Top 10 Clientes */}
+                    <div className="card" style={{ margin: 0, padding: '20px', overflowX: 'auto' }}>
+                        <h3 style={{ margin: '0 0 20px 0', fontSize: '1rem', fontWeight: 600 }}>Top 10 Clientes por Ingresos Generados</h3>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', textAlign: 'left' }}>
+                                    <th style={{ padding: '8px', fontWeight: 500 }}>Cliente</th>
+                                    <th style={{ padding: '8px', fontWeight: 500 }}>Plan Actual</th>
+                                    <th style={{ padding: '8px', fontWeight: 500 }}>Miembro Desde</th>
+                                    <th style={{ padding: '8px', fontWeight: 500, textAlign: 'right' }}>Ingresos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {topCustomers.map((c, idx) => (
+                                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                        <td style={{ padding: '12px 8px', fontWeight: 500, color: 'var(--text-main)' }}>{c.name}</td>
+                                        <td style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>{c.planName}</td>
+                                        <td style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>{c.joinedDate}</td>
+                                        <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 600, color: '#16a34a' }}>${c.revenue.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                                    </tr>
+                                ))}
+                                {topCustomers.length === 0 && (
+                                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>No hay datos suficientes</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Métricas Clave (Line Charts) */}
+                    <div className="card" style={{ margin: 0, padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Métricas Clave</h3>
+                        
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="flex-between">
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tasa de Renovación</span>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#16a34a' }}>+2.4%</span>
+                            </div>
+                            <div style={{ height: '60px', width: '100%' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={keyMetrics.renewalRate}>
+                                        <Line type="monotone" dataKey="rate" stroke="#16a34a" strokeWidth={2} dot={false} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="flex-between">
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tasa de No Renovación</span>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#ef4444' }}>-1.2%</span>
+                            </div>
+                            <div style={{ height: '60px', width: '100%' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={keyMetrics.nonRenewalRate}>
+                                        <Line type="monotone" dataKey="rate" stroke="#ef4444" strokeWidth={2} dot={false} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="flex-between">
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tasa de Nuevos</span>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#3b82f6' }}>+5.8%</span>
+                            </div>
+                            <div style={{ height: '60px', width: '100%' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={keyMetrics.newSignupsRate}>
+                                        <Line type="monotone" dataKey="rate" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Fourth Row: Análisis de Membresías */}
+                <div className="card" style={{ margin: '0 0 20px 0', padding: '20px', overflowX: 'auto' }}>
+                    <h3 style={{ margin: '0 0 20px 0', fontSize: '1rem', fontWeight: 600 }}>Análisis de Membresías</h3>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', textAlign: 'left' }}>
+                                <th style={{ padding: '8px', fontWeight: 500 }}>Plan</th>
+                                <th style={{ padding: '8px', fontWeight: 500, textAlign: 'right' }}>Activas</th>
+                                <th style={{ padding: '8px', fontWeight: 500, textAlign: 'right' }}>Vencidas</th>
+                                <th style={{ padding: '8px', fontWeight: 500, textAlign: 'right' }}>Canceladas</th>
+                                <th style={{ padding: '8px', fontWeight: 500, textAlign: 'right' }}>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {membershipAnalysis.map((a, idx) => {
+                                const total = a.activeCount + a.expiredCount + a.cancelledCount;
+                                return (
+                                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                        <td style={{ padding: '12px 8px', fontWeight: 500, color: 'var(--text-main)' }}>{a.planName}</td>
+                                        <td style={{ padding: '12px 8px', textAlign: 'right', color: '#16a34a', fontWeight: 500 }}>{a.activeCount}</td>
+                                        <td style={{ padding: '12px 8px', textAlign: 'right', color: '#f59e0b', fontWeight: 500 }}>{a.expiredCount}</td>
+                                        <td style={{ padding: '12px 8px', textAlign: 'right', color: '#ef4444', fontWeight: 500 }}>{a.cancelledCount}</td>
+                                        <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 600 }}>{total}</td>
+                                    </tr>
+                                );
+                            })}
+                            {membershipAnalysis.length === 0 && (
+                                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>No hay datos suficientes</td></tr>
+                            )}
+                        </tbody>
+                    </table>
                 </div>
 
                 {/* ── Sección del Agente IA (INSIGHTS) ──────────────────────────────────────── */}

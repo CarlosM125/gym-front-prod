@@ -36,6 +36,26 @@ export interface PlanDistribution {
     percentage: string;
 }
 
+export interface TopCustomer {
+    name: string;
+    revenue: number;
+    planName: string;
+    joinedDate: string;
+}
+
+export interface KeyMetrics {
+    renewalRate: { month: string; rate: number }[];
+    nonRenewalRate: { month: string; rate: number }[];
+    newSignupsRate: { month: string; rate: number }[];
+}
+
+export interface MembershipAnalysis {
+    planName: string;
+    activeCount: number;
+    expiredCount: number;
+    cancelledCount: number;
+}
+
 export interface DashboardStats {
     activeCustomers: number;
     totalRevenue: number;
@@ -43,6 +63,9 @@ export interface DashboardStats {
     monthlyRevenue: number;
     planDistribution: PlanDistribution[];
     historicalStats: ChartData[];
+    topCustomers: TopCustomer[];
+    keyMetrics: KeyMetrics;
+    membershipAnalysis: MembershipAnalysis[];
 }
 
 interface MembershipState {
