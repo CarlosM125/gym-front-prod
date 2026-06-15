@@ -74,16 +74,35 @@ function ProposalCard({ proposal }: { proposal: MarketingProposal }) {
 }
 
 export default function AnalyticsScreen() {
-    const { historicalStats, dashboardStats, fetchHistoricalStats, fetchDashboardStats } = useMembershipStore();
+    const { dashboardStats, fetchDashboardStats, plans, fetchPlans } = useMembershipStore();
     const { proposals, isLoading: marketingLoading, isRunning, lastRun, fetchProposals, triggerAnalysis } = useMarketingStore();
     const [triggerMsg, setTriggerMsg] = useState('');
+    
+    // Filtros state
+    const [filters, setFilters] = useState({
+        startDate: '',
+        endDate: '',
+        branchId: '',
+        planId: '',
+        status: ''
+    });
 
     useEffect(() => {
-        const currentYear = new Date().getFullYear();
-        fetchHistoricalStats(currentYear);
         fetchDashboardStats();
         fetchProposals();
-    }, [fetchHistoricalStats, fetchDashboardStats, fetchProposals]);
+        fetchPlans();
+    }, [fetchDashboardStats, fetchProposals, fetchPlans]);
+
+    const handleApplyFilters = () => {
+        const payload: any = {};
+        if (filters.startDate) payload.startDate = filters.startDate;
+        if (filters.endDate) payload.endDate = filters.endDate;
+        if (filters.branchId) payload.branchId = Number(filters.branchId);
+        if (filters.planId) payload.planId = Number(filters.planId);
+        if (filters.status) payload.status = filters.status;
+        
+        fetchDashboardStats(payload);
+    };
 
     const handleTrigger = async () => {
         setTriggerMsg('');
@@ -97,51 +116,105 @@ export default function AnalyticsScreen() {
     const activeCustomers = dashboardStats?.activeCustomers || 0;
     const monthlyRevenue = dashboardStats?.monthlyRevenue || 0;
     const planDistribution = dashboardStats?.planDistribution || [];
+    const historicalStats = dashboardStats?.historicalStats || [];
 
     const lastRunFormatted = lastRun
         ? new Date(lastRun).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
         : 'Nunca';
 
     return (
-        <div>
-            <h1 className="page-title">Análisis Financiero</h1>
-            <p className="page-subtitle">Resumen de ingresos y métricas clave</p>
+        <div style={{ display: 'flex', gap: '24px', flexDirection: 'row', flexWrap: 'wrap' }}>
+            {/* ── Columna Izquierda: Filtros ── */}
+            <div style={{ width: '260px', flexShrink: 0 }}>
+                <div className="card" style={{ position: 'sticky', top: '24px' }}>
+                    <div className="flex-between" style={{ marginBottom: '20px' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Filtros</h3>
+                        <button 
+                            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '0.8rem' }}
+                            onClick={() => {
+                                setFilters({ startDate: '', endDate: '', branchId: '', planId: '', status: '' });
+                                fetchDashboardStats();
+                            }}
+                        >
+                            Limpiar
+                        </button>
+                    </div>
 
-            {/* Top Cards */}
-            <div className="grid-cols-4" style={{ marginBottom: '24px' }}>
-                <div className="card" style={{ margin: 0 }}>
-                    <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                        <DollarSign size={18} style={{ color: 'white', background: 'var(--primary-color)', borderRadius: '4px', padding: '2px' }} />
-                        <b>Ingresos del Mes</b>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: 500 }}>Fecha Desde</label>
+                        <input type="date" className="form-input" style={{ marginBottom: 0 }} value={filters.startDate} onChange={e => setFilters({...filters, startDate: e.target.value})} />
                     </div>
-                    <h2 style={{ margin: '0', fontSize: '2rem' }}>${monthlyRevenue.toFixed(0)}</h2>
-                    <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Mes actual en curso</p>
-                </div>
-                <div className="card" style={{ margin: 0 }}>
-                    <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                        <Users size={18} style={{ color: 'white', background: '#000', borderRadius: '4px', padding: '2px' }} />
-                        <b>Clientes Activos</b>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: 500 }}>Fecha Hasta</label>
+                        <input type="date" className="form-input" style={{ marginBottom: 0 }} value={filters.endDate} onChange={e => setFilters({...filters, endDate: e.target.value})} />
                     </div>
-                    <h2 style={{ margin: '0', fontSize: '2rem' }}>{activeCustomers}</h2>
-                    <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Membresías vigentes</p>
-                </div>
-                <div className="card" style={{ margin: 0 }}>
-                    <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                        <TrendingUp size={18} style={{ color: 'white', background: '#000', borderRadius: '4px', padding: '2px' }} />
-                        <b>Ingreso Total</b>
+
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: 500 }}>Plan</label>
+                        <select className="form-input" style={{ marginBottom: 0 }} value={filters.planId} onChange={e => setFilters({...filters, planId: e.target.value})}>
+                            <option value="">Todos</option>
+                            {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
                     </div>
-                    <h2 style={{ margin: '0', fontSize: '2rem' }}>${totalRevenue.toFixed(0)}</h2>
-                    <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Todas las membresías</p>
-                </div>
-                <div className="card" style={{ margin: 0 }}>
-                    <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                        <CreditCard size={18} style={{ color: 'white', background: '#000', borderRadius: '4px', padding: '2px' }} />
-                        <b>Promedio</b>
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: 500 }}>Estado Membresía</label>
+                        <select className="form-input" style={{ marginBottom: 0 }} value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})}>
+                            <option value="">Todos</option>
+                            <option value="ACTIVE">Activa</option>
+                            <option value="EXPIRED">Vencida</option>
+                            <option value="CANCELLED">Cancelada</option>
+                        </select>
                     </div>
-                    <h2 style={{ margin: '0', fontSize: '2rem' }}>${avgRevenue.toFixed(0)}</h2>
-                    <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Por cliente histórico</p>
+
+                    <button className="btn-primary" style={{ width: '100%' }} onClick={handleApplyFilters}>
+                        Aplicar Filtros
+                    </button>
                 </div>
             </div>
+
+            {/* ── Columna Derecha: Contenido ── */}
+            <div style={{ flex: 1, minWidth: '0' }}>
+                <div style={{ marginBottom: '24px' }}>
+                    <h1 className="page-title" style={{ margin: '0 0 4px 0' }}>Análisis Financiero</h1>
+                    <p className="page-subtitle" style={{ margin: 0 }}>Vista general del rendimiento del gimnasio</p>
+                </div>
+
+                {/* Top Cards */}
+                <div className="grid-cols-4" style={{ marginBottom: '24px' }}>
+                    <div className="card" style={{ margin: 0 }}>
+                        <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                            <DollarSign size={18} style={{ color: 'white', background: 'var(--primary-color)', borderRadius: '4px', padding: '2px' }} />
+                            <b>Ingresos del Mes</b>
+                        </div>
+                        <h2 style={{ margin: '0', fontSize: '2rem' }}>${monthlyRevenue.toFixed(0)}</h2>
+                        <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Mes actual en curso</p>
+                    </div>
+                    <div className="card" style={{ margin: 0 }}>
+                        <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                            <Users size={18} style={{ color: 'white', background: '#000', borderRadius: '4px', padding: '2px' }} />
+                            <b>Clientes Activos</b>
+                        </div>
+                        <h2 style={{ margin: '0', fontSize: '2rem' }}>{activeCustomers}</h2>
+                        <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Membresías vigentes</p>
+                    </div>
+                    <div className="card" style={{ margin: 0 }}>
+                        <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                            <TrendingUp size={18} style={{ color: 'white', background: '#000', borderRadius: '4px', padding: '2px' }} />
+                            <b>Ingreso Total</b>
+                        </div>
+                        <h2 style={{ margin: '0', fontSize: '2rem' }}>${totalRevenue.toFixed(0)}</h2>
+                        <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Periodo seleccionado</p>
+                    </div>
+                    <div className="card" style={{ margin: 0 }}>
+                        <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                            <CreditCard size={18} style={{ color: 'white', background: '#000', borderRadius: '4px', padding: '2px' }} />
+                            <b>Ticket Promedio</b>
+                        </div>
+                        <h2 style={{ margin: '0', fontSize: '2rem' }}>${avgRevenue.toFixed(0)}</h2>
+                        <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Por cliente histórico</p>
+                    </div>
+                </div>
 
             {/* Charts Section */}
             <div className="grid-cols-2">
@@ -202,58 +275,67 @@ export default function AnalyticsScreen() {
                 </div>
             </div>
 
-            {/* ── Sección del Agente IA ──────────────────────────────────────── */}
-            <div className="card" style={{ marginTop: '32px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                        <h3 style={{ margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Sparkles size={20} style={{ color: 'var(--primary-color)' }} />
-                            Propuestas del Agente IA
-                        </h3>
-                        <p className="text-muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-                            Generadas automáticamente cada día a las 6:00 AM · Último análisis: <b>{lastRunFormatted}</b>
-                        </p>
+                {/* ── Sección del Agente IA ──────────────────────────────────────── */}
+                <div className="card" style={{ marginTop: '32px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                        <div>
+                            <h3 style={{ margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Sparkles size={20} style={{ color: 'var(--primary-color)' }} />
+                                INSIGHTS: Propuestas del Agente IA
+                            </h3>
+                            <p className="text-muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                                Generadas automáticamente cada día a las 6:00 AM · Último análisis: <b>{lastRunFormatted}</b>
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {triggerMsg && (
+                                <span style={{ fontSize: '0.85rem', color: triggerMsg.includes('✅') ? '#16a34a' : '#ef4444' }}>
+                                    {triggerMsg.includes('✅') ? <CheckCircle size={14} style={{ display: 'inline', marginRight: '4px' }} /> : null}
+                                    {triggerMsg}
+                                </span>
+                            )}
+                            <button
+                                className="btn-outline"
+                                onClick={handleTrigger}
+                                disabled={isRunning}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                            >
+                                <RefreshCw size={16} style={{ animation: isRunning ? 'spin 1s linear infinite' : 'none' }} />
+                                {isRunning ? 'Analizando...' : 'Ejecutar Análisis Ahora'}
+                            </button>
+                        </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        {triggerMsg && (
-                            <span style={{ fontSize: '0.85rem', color: triggerMsg.includes('✅') ? '#16a34a' : '#ef4444' }}>
-                                {triggerMsg.includes('✅') ? <CheckCircle size={14} style={{ display: 'inline', marginRight: '4px' }} /> : null}
-                                {triggerMsg}
-                            </span>
-                        )}
-                        <button
-                            className="btn-outline"
-                            onClick={handleTrigger}
-                            disabled={isRunning}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
-                        >
-                            <RefreshCw size={16} style={{ animation: isRunning ? 'spin 1s linear infinite' : 'none' }} />
-                            {isRunning ? 'Analizando...' : 'Ejecutar Análisis Ahora'}
-                        </button>
-                    </div>
-                </div>
 
-                {marketingLoading ? (
-                    <p className="text-muted" style={{ textAlign: 'center', padding: '40px' }}>Cargando propuestas...</p>
-                ) : proposals.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                        <Sparkles size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />
-                        <p style={{ margin: 0 }}>Aún no hay propuestas generadas.</p>
-                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem' }}>
-                            El agente corre automáticamente a las 6 AM o puedes ejecutarlo ahora.
-                        </p>
-                    </div>
-                ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {proposals.slice(0, 8).map(p => (
-                            <ProposalCard key={p.id} proposal={p} />
-                        ))}
-                    </div>
-                )}
+                    {marketingLoading ? (
+                        <p className="text-muted" style={{ textAlign: 'center', padding: '40px' }}>Cargando propuestas...</p>
+                    ) : proposals.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                            <Sparkles size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />
+                            <p style={{ margin: 0 }}>Aún no hay propuestas generadas.</p>
+                            <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem' }}>
+                                El agente corre automáticamente a las 6 AM o puedes ejecutarlo ahora.
+                            </p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                            {proposals.slice(0, 3).map(p => (
+                                <ProposalCard key={p.id} proposal={p} />
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
             <style>{`
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                @media (max-width: 1024px) {
+                    div[style*="display: 'flex', gap: '24px'"] {
+                        flex-direction: column !important;
+                    }
+                    div[style*="width: '260px'"] {
+                        width: 100% !important;
+                    }
+                }
             `}</style>
         </div>
     );

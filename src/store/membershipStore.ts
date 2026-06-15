@@ -42,6 +42,7 @@ export interface DashboardStats {
     averageRevenuePerCustomer: number;
     monthlyRevenue: number;
     planDistribution: PlanDistribution[];
+    historicalStats: ChartData[];
 }
 
 interface MembershipState {
@@ -55,7 +56,7 @@ interface MembershipState {
     fetchExpiringToday: () => Promise<void>;
     fetchExpiring: (fromDate: string, toDate: string) => Promise<void>;
     fetchHistoricalStats: (year: number) => Promise<void>;
-    fetchDashboardStats: () => Promise<void>;
+    fetchDashboardStats: (filters?: { startDate?: string; endDate?: string; branchId?: number; planId?: number; status?: string; }) => Promise<void>;
     renewMembership: (payload: { customerId?: number; documentId?: string; customerFullName: string; branchId?: number; planId?: number; amountPaid: number; startDate: string; consentGiven?: boolean; }) => Promise<boolean>;
     updateMembershipStartDate: (customerId: number, startDate: string) => Promise<boolean>;
 }
@@ -114,10 +115,22 @@ export const useMembershipStore = create<MembershipState>((set) => ({
         }
     },
 
-    fetchDashboardStats: async () => {
+    fetchDashboardStats: async (filters) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await apiClient.get<ApiResponse<DashboardStats>>('/memberships/dashboard-stats');
+            let url = '/memberships/dashboard-stats';
+            if (filters) {
+                const params = new URLSearchParams();
+                if (filters.startDate) params.append('startDate', filters.startDate);
+                if (filters.endDate) params.append('endDate', filters.endDate);
+                if (filters.branchId) params.append('branchId', filters.branchId.toString());
+                if (filters.planId) params.append('planId', filters.planId.toString());
+                if (filters.status) params.append('status', filters.status);
+                const query = params.toString();
+                if (query) url += `?${query}`;
+            }
+
+            const response = await apiClient.get<ApiResponse<DashboardStats>>(url);
             if (response.data.success) {
                 set({ dashboardStats: response.data.data, isLoading: false });
             }
