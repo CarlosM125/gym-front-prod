@@ -20,6 +20,14 @@ export interface ChartData {
     revenue: number;
 }
 
+export interface CustomerHistory {
+    transactionId: number;
+    transactionDate: string;
+    planName: string;
+    amountPaid: number;
+    branchName: string;
+}
+
 export interface MembershipPlan {
     id: number;
     name: string;
@@ -80,6 +88,7 @@ interface MembershipState {
     fetchExpiring: (fromDate: string, toDate: string) => Promise<void>;
     fetchHistoricalStats: (year: number) => Promise<void>;
     fetchDashboardStats: (filters?: { startDate?: string; endDate?: string; branchId?: number; planId?: number; status?: string; }) => Promise<void>;
+    fetchCustomerHistory: (customerId: number) => Promise<CustomerHistory[] | null>;
     renewMembership: (payload: { customerId?: number; documentId?: string; customerFullName: string; branchId?: number; planId?: number; amountPaid: number; startDate: string; consentGiven?: boolean; }) => Promise<boolean>;
     updateMembershipStartDate: (customerId: number, startDate: string) => Promise<boolean>;
 }
@@ -159,6 +168,21 @@ export const useMembershipStore = create<MembershipState>((set) => ({
             }
         } catch (error: any) {
             set({ error: error.message, isLoading: false });
+        }
+    },
+
+    fetchCustomerHistory: async (customerId: number) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await apiClient.get<ApiResponse<CustomerHistory[]>>(`/memberships/history/customer/${customerId}`);
+            set({ isLoading: false });
+            if (response.data.success) {
+                return response.data.data;
+            }
+            return null;
+        } catch (error: any) {
+            set({ error: error.message, isLoading: false });
+            return null;
         }
     },
 

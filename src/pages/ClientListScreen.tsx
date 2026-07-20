@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useCustomerStore } from '../store/customerStore';
 import { useMembershipStore } from '../store/membershipStore';
-import { Edit2, X, Search, Upload, Trash2 } from 'lucide-react';
+import { Edit2, X, Search, Upload, Trash2, Eye } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { compressImage } from '../utils/imageCompressor';
 
@@ -21,7 +21,12 @@ export default function ClientListScreen() {
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    const { updateMembershipStartDate } = useMembershipStore();
+    // History Modal State
+    const [historyCustomer, setHistoryCustomer] = useState<any>(null);
+    const [customerHistory, setCustomerHistory] = useState<any[] | null>(null);
+    const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+
+    const { updateMembershipStartDate, fetchCustomerHistory } = useMembershipStore();
 
     useEffect(() => {
         fetchCustomers();
@@ -62,6 +67,14 @@ export default function ClientListScreen() {
             setSelectedImage(file);
             setImagePreview(URL.createObjectURL(file));
         }
+    };
+
+    const handleViewHistory = async (c: any) => {
+        setHistoryCustomer(c);
+        setIsHistoryLoading(true);
+        const history = await fetchCustomerHistory(c.id);
+        setCustomerHistory(history || []);
+        setIsHistoryLoading(false);
     };
 
     const handleSaveEdit = async () => {
@@ -216,8 +229,11 @@ export default function ClientListScreen() {
                                                 {c?.membershipStatus === 'ACTIVE' ? 'Activo' : 'Inactivo'}
                                             </span>
                                         </td>
-                                        <td>
-                                            <button className="btn-outline" style={{padding: '6px 10px'}} onClick={() => handleEditClick(c)}>
+                                        <td style={{ display: 'flex', gap: '8px' }}>
+                                            <button className="btn-outline" style={{padding: '6px 10px'}} onClick={() => handleViewHistory(c)} title="Ver Historial">
+                                                <Eye size={16} />
+                                            </button>
+                                            <button className="btn-outline" style={{padding: '6px 10px'}} onClick={() => handleEditClick(c)} title="Editar">
                                                 <Edit2 size={16} />
                                             </button>
                                         </td>
@@ -305,6 +321,88 @@ export default function ClientListScreen() {
                                     {isSaving ? 'Guardando...' : 'Guardar Cambios'}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Historial */}
+            {historyCustomer && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    <div className="card" style={{width: '90%', maxWidth: '500px', margin: 0, maxHeight: '80vh', display: 'flex', flexDirection: 'column'}}>
+                        <div className="flex-between" style={{marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--border-color)'}}>
+                            <div>
+                                <h3 style={{margin: 0}}>Historial del Cliente</h3>
+                                <p style={{margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)'}}>{historyCustomer.fullName}</p>
+                            </div>
+                            <button className="btn-outline" style={{border: 'none', padding: '4px'}} onClick={() => setHistoryCustomer(null)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <div style={{overflowY: 'auto', flex: 1, paddingRight: '8px'}}>
+                            {isHistoryLoading ? (
+                                <p style={{textAlign: 'center', color: 'var(--text-muted)'}}>Cargando historial...</p>
+                            ) : (
+                                customerHistory && customerHistory.length > 0 ? (
+                                    <div style={{position: 'relative', paddingLeft: '20px', borderLeft: '2px solid var(--border-color)', margin: '10px 0 10px 10px'}}>
+                                        {customerHistory.map((h, idx) => {
+                                            const date = new Date(h.transactionDate);
+                                            const formattedDate = date.toLocaleDateString('es-EC', { year: 'numeric', month: 'long', day: 'numeric' });
+                                            
+                                            // Check for gaps (e.g. if previous transaction was > 40 days ago)
+                                            let showGap = false;
+                                            if (idx < customerHistory.length - 1) {
+                                                const prevDate = new Date(customerHistory[idx+1].transactionDate);
+                                                const diffTime = Math.abs(date.getTime() - prevDate.getTime());
+                                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                                if (diffDays > 40) showGap = true; // More than 40 days implies a missed month/gap
+                                            }
+
+                                            return (
+                                                <div key={idx} style={{position: 'relative', marginBottom: '24px'}}>
+                                                    <div style={{
+                                                        position: 'absolute', left: '-27px', top: '4px', width: '12px', height: '12px',
+                                                        borderRadius: '50%', backgroundColor: idx === 0 ? '#16a34a' : '#d62020', border: '2px solid white'
+                                                    }}></div>
+                                                    <div style={{fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px'}}>
+                                                        {formattedDate}
+                                                    </div>
+                                                    <div className="card" style={{margin: 0, padding: '12px', backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)'}}>
+                                                        <div className="flex-between">
+                                                            <strong style={{color: 'var(--text-main)'}}>{h.planName}</strong>
+                                                            <span style={{fontWeight: 600, color: '#16a34a'}}>${h.amountPaid}</span>
+                                                        </div>
+                                                        <div style={{fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px'}}>
+                                                            Sucursal: {h.branchName}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {showGap && (
+                                                        <div style={{
+                                                            position: 'relative', 
+                                                            padding: '24px 0 0 0',
+                                                            color: 'var(--text-muted)',
+                                                            fontSize: '0.8rem',
+                                                            fontStyle: 'italic',
+                                                            left: '-20px'
+                                                        }}>
+                                                            <div style={{position: 'absolute', left: '-5px', top: '16px', bottom: '0', borderLeft: '2px dashed var(--border-color)', height: '100%'}}></div>
+                                                            <span style={{paddingLeft: '24px', opacity: 0.7}}>Período inactivo...</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p style={{textAlign: 'center', color: 'var(--text-muted)', marginTop: '20px'}}>No hay pagos registrados para este cliente.</p>
+                                )
+                            )}
                         </div>
                     </div>
                 </div>
