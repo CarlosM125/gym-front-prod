@@ -5,7 +5,7 @@ import {
     AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
-import { DollarSign, Users, TrendingUp, CreditCard, RefreshCw, CheckCircle, Lightbulb, Activity, UserPlus } from 'lucide-react';
+import { DollarSign, Users, TrendingUp, CreditCard, RefreshCw, CheckCircle, Lightbulb, Activity, UserPlus, Filter } from 'lucide-react';
 
 
 
@@ -26,6 +26,7 @@ export default function AnalyticsScreen() {
         planId: '',
         status: ''
     });
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     useEffect(() => {
         fetchDashboardStats();
@@ -71,73 +72,87 @@ export default function AnalyticsScreen() {
         : 'Nunca';
 
     return (
-        <div style={{ display: 'flex', gap: '20px', flexDirection: 'row', flexWrap: 'wrap' }}>
-            {/* ── Columna Izquierda: Filtros ── */}
-            <div style={{ width: '250px', flexShrink: 0 }}>
-                <div style={{ position: 'sticky', top: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                        <Activity size={24} style={{ color: 'var(--primary-color)' }} />
-                        <div>
-                            <h2 style={{ margin: 0, fontSize: '1.2rem', lineHeight: '1.2' }}>GYM ANALYTICS</h2>
-                            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Dashboard Ejecutivo</p>
-                        </div>
-                    </div>
-
-                    <div className="card" style={{ padding: '20px', background: 'var(--card-bg)' }}>
-                        <div className="flex-between" style={{ marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
-                            <h3 style={{ margin: 0, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)' }}>Filtros</h3>
-                            <button 
-                                style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
-                                onClick={() => {
-                                    setFilters({ startDate: '', endDate: '', branchId: '', planId: '', status: '' });
-                                    fetchDashboardStats();
-                                }}
-                            >
-                                Limpiar filtros
-                            </button>
-                        </div>
-
-                        <div style={{ marginBottom: '16px' }}>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Rango de Fechas (Desde)</label>
-                            <input type="date" className="form-input" style={{ marginBottom: 0, padding: '8px', fontSize: '0.85rem' }} value={filters.startDate} onChange={e => setFilters({...filters, startDate: e.target.value})} />
-                        </div>
-                        <div style={{ marginBottom: '16px' }}>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Rango de Fechas (Hasta)</label>
-                            <input type="date" className="form-input" style={{ marginBottom: 0, padding: '8px', fontSize: '0.85rem' }} value={filters.endDate} onChange={e => setFilters({...filters, endDate: e.target.value})} />
-                        </div>
-
-                        <div style={{ marginBottom: '16px' }}>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Plan</label>
-                            <select className="form-input" style={{ marginBottom: 0, padding: '8px', fontSize: '0.85rem' }} value={filters.planId} onChange={e => setFilters({...filters, planId: e.target.value})}>
-                                <option value="">Todos</option>
-                                {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
-                        </div>
-
-                        <div style={{ marginBottom: '24px' }}>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Estado Membresía</label>
-                            <select className="form-input" style={{ marginBottom: 0, padding: '8px', fontSize: '0.85rem' }} value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})}>
-                                <option value="">Activa</option>
-                                <option value="EXPIRED">Vencida</option>
-                                <option value="CANCELLED">Cancelada</option>
-                                <option value="">Todos</option>
-                            </select>
-                        </div>
-
-                        <button className="btn-primary" style={{ width: '100%', padding: '12px', fontSize: '0.9rem' }} onClick={handleApplyFilters}>
-                            Aplicar Filtros
-                        </button>
+        <div style={{ position: 'relative', width: '100%' }}>
+            {/* ── Header Title & Filter Toggle ── */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Activity size={28} style={{ color: 'var(--primary-color)' }} />
+                    <div>
+                        <h2 style={{ margin: 0, fontSize: '1.5rem', lineHeight: '1.2' }}>GYM ANALYTICS</h2>
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Dashboard Ejecutivo</p>
                     </div>
                 </div>
+                <button 
+                    className="btn-outline" 
+                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                    <Filter size={18} />
+                    {isFilterOpen ? 'Cerrar Filtros' : 'Filtros'}
+                </button>
             </div>
 
-            {/* ── Columna Derecha: Contenido ── */}
-            <div style={{ flex: 1, minWidth: '0' }}>
-                <div style={{ marginBottom: '20px' }}>
-                    <h2 style={{ margin: '0 0 4px 0', fontSize: '1.4rem' }}>Resumen General</h2>
-                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Vista general del rendimiento del gimnasio</p>
-                </div>
+            {/* ── Floating Filters Panel ── */}
+            {isFilterOpen && (
+                <div className="card" style={{ 
+                    position: 'absolute', 
+                    top: '70px', 
+                    right: '0', 
+                    width: '320px', 
+                    zIndex: 100,
+                    padding: '20px', 
+                    background: 'var(--card-bg)',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                    border: '1px solid var(--border-color)'
+                }}>
+                    <div className="flex-between" style={{ marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+                        <h3 style={{ margin: 0, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)' }}>Filtros</h3>
+                        <button 
+                            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+                            onClick={() => {
+                                setFilters({ startDate: '', endDate: '', branchId: '', planId: '', status: '' });
+                                fetchDashboardStats();
+                            }}
+                        >
+                            Limpiar
+                        </button>
+                    </div>
 
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Rango de Fechas (Desde)</label>
+                        <input type="date" className="form-input" style={{ marginBottom: 0, padding: '8px', fontSize: '0.85rem' }} value={filters.startDate} onChange={e => setFilters({...filters, startDate: e.target.value})} />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Rango de Fechas (Hasta)</label>
+                        <input type="date" className="form-input" style={{ marginBottom: 0, padding: '8px', fontSize: '0.85rem' }} value={filters.endDate} onChange={e => setFilters({...filters, endDate: e.target.value})} />
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Plan</label>
+                        <select className="form-input" style={{ marginBottom: 0, padding: '8px', fontSize: '0.85rem' }} value={filters.planId} onChange={e => setFilters({...filters, planId: e.target.value})}>
+                            <option value="">Todos</option>
+                            {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Estado Membresía</label>
+                        <select className="form-input" style={{ marginBottom: 0, padding: '8px', fontSize: '0.85rem' }} value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})}>
+                            <option value="">Activa</option>
+                            <option value="EXPIRED">Vencida</option>
+                            <option value="CANCELLED">Cancelada</option>
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+
+                    <button className="btn-primary" style={{ width: '100%', padding: '12px', fontSize: '0.9rem' }} onClick={() => { handleApplyFilters(); setIsFilterOpen(false); }}>
+                        Aplicar Filtros
+                    </button>
+                </div>
+            )}
+
+            {/* ── Contenido ── */}
+            <div style={{ width: '100%' }}>
                 {/* 5 Top Cards Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '20px' }}>
                     <div className="card" style={{ margin: 0, padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -462,12 +477,6 @@ export default function AnalyticsScreen() {
                     }
                 }
                 @media (max-width: 1024px) {
-                    div[style*="display: 'flex', gap: '20px'"] {
-                        flex-direction: column !important;
-                    }
-                    div[style*="width: '250px'"] {
-                        width: 100% !important;
-                    }
                     div[style*="grid-template-columns: 2fr 1.2fr"] {
                         grid-template-columns: 1fr !important;
                     }
