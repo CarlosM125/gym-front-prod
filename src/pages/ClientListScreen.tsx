@@ -49,6 +49,15 @@ export default function ClientListScreen() {
                 case 'EXPIRING_TODAY': return c.currentEndDate === today;
                 default: return true;
             }
+        })
+        .sort((a, b) => {
+            if (filterStatus === 'EXPIRED') {
+                if (!a.currentEndDate && !b.currentEndDate) return 0;
+                if (!a.currentEndDate) return 1;
+                if (!b.currentEndDate) return -1;
+                return new Date(b.currentEndDate).getTime() - new Date(a.currentEndDate).getTime();
+            }
+            return 0;
         });
 
     const handleEditClick = (c: any) => {
