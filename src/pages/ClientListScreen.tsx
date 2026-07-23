@@ -82,7 +82,17 @@ export default function ClientListScreen() {
         setHistoryCustomer(c);
         setIsHistoryLoading(true);
         const history = await fetchCustomerHistory(c.id);
-        setCustomerHistory(history || []);
+        
+        // Filtrar duplicados exactos (misma fecha, plan y monto) que podrían generarse por doble clic al renovar
+        const uniqueHistory = history ? history.filter((v, i, a) => 
+            a.findIndex(t => 
+                new Date(t.transactionDate).toDateString() === new Date(v.transactionDate).toDateString() && 
+                t.planName === v.planName && 
+                t.amountPaid === v.amountPaid
+            ) === i
+        ) : [];
+        
+        setCustomerHistory(uniqueHistory);
         setIsHistoryLoading(false);
     };
 
