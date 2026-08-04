@@ -3,7 +3,9 @@ import { useBranchStore } from '../store/branchStore';
 import { useMembershipStore } from '../store/membershipStore';
 import { useCustomerStore } from '../store/customerStore';
 import { useSearchParams } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, CheckCircle, AlertCircle } from 'lucide-react';
+
+const MIN_DOC_LENGTH = 5; // mínimo de caracteres antes de buscar
 
 export default function MembershipPOSScreen() {
     const { branches, fetchBranches } = useBranchStore();
@@ -18,6 +20,7 @@ export default function MembershipPOSScreen() {
     const [customerName, setCustomerName] = useState("");
     const [transactionDate, setTransactionDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [consentGiven, setConsentGiven] = useState(false);
+    const [docStatus, setDocStatus] = useState<'idle' | 'found' | 'not_found' | 'searching'>('idle');
 
     useEffect(() => { 
         fetchBranches();
@@ -29,24 +32,46 @@ export default function MembershipPOSScreen() {
         const doc = searchParams.get('doc');
         if (doc) {
             setDocId(doc);
-            fetchCustomerByDocId(doc).then(customer => {
-                if (customer) {
-                    setCustomerName(customer.fullName);
-                    if (customer.homeBranchId) setBranchId(customer.homeBranchId.toString());
-                }
-            });
+            if (doc.length >= MIN_DOC_LENGTH) {
+                setDocStatus('searching');
+                fetchCustomerByDocId(doc).then(customer => {
+                    if (customer) {
+                        setCustomerName(customer.fullName);
+                        if (customer.homeBranchId) setBranchId(customer.homeBranchId.toString());
+                        setDocStatus('found');
+                    } else {
+                        setDocStatus('not_found');
+                    }
+                });
+            }
         }
     }, [searchParams, fetchCustomerByDocId]);
 
     const handleDocIdBlur = async () => {
-        if (!docId) return;
-        const customer = await fetchCustomerByDocId(docId);
+        // Solo buscar si tiene el mínimo de caracteres requeridos
+        if (!docId || docId.trim().length < MIN_DOC_LENGTH) {
+            setDocStatus('idle');
+            return;
+        }
+        setDocStatus('searching');
+        const customer = await fetchCustomerByDocId(docId.trim());
         if (customer) {
             setCustomerName(customer.fullName);
             if (customer.homeBranchId) {
                 setBranchId(customer.homeBranchId.toString());
             }
+            setDocStatus('found');
+        } else {
+            setDocStatus('not_found');
+            // No limpiar nombre — puede ser un cliente nuevo
         }
+    };
+
+    const handleDocIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setDocId(e.target.value);
+        // Resetear estado al escribir para que no muestre encontrado/no encontrado mientras escribe
+        if (docStatus !== 'idle') setDocStatus('idle');
+        if (!e.target.value) setCustomerName('');
     };
 
     const handlePayment = async () => {
@@ -72,6 +97,7 @@ export default function MembershipPOSScreen() {
             setPlanId(""); 
             setCustomerName(""); 
             setBranchId("");
+            setDocStatus('idle');
             setTransactionDate(new Date().toISOString().split('T')[0]);
         }
     };
@@ -90,14 +116,43 @@ export default function MembershipPOSScreen() {
                             <Search size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
                             <input 
                                 className="form-input" 
-                                style={{paddingLeft: '40px', margin:0}}
+                                style={{
+                                    paddingLeft: '40px', 
+                                    paddingRight: '40px', 
+                                    margin: 0,
+                                    borderColor: docStatus === 'found' 
+                                        ? 'var(--success, #22c55e)' 
+                                        : docStatus === 'not_found' 
+                                        ? 'var(--warning, #f59e0b)' 
+                                        : undefined
+                                }}
                                 placeholder="Buscar por Documento" 
                                 value={docId} 
-                                onChange={e=>setDocId(e.target.value)} 
+                                onChange={handleDocIdChange}
                                 onBlur={handleDocIdBlur}
                                 required
                             />
+                            {/* Ícono de estado */}
+                            {docStatus === 'found' && (
+                                <CheckCircle size={18} style={{position:'absolute', right:'12px', top:'14px', color:'var(--success, #22c55e)'}} />
+                            )}
+                            {docStatus === 'not_found' && (
+                                <AlertCircle size={18} style={{position:'absolute', right:'12px', top:'14px', color:'var(--warning, #f59e0b)'}} />
+                            )}
+                            {docStatus === 'searching' && (
+                                <span style={{position:'absolute', right:'14px', top:'14px', fontSize:'0.7rem', color:'var(--text-muted)'}}>•••</span>
+                            )}
                         </div>
+                        {docStatus === 'not_found' && (
+                            <p style={{fontSize:'0.8rem', color:'var(--warning, #f59e0b)', marginTop:'6px'}}>
+                                ⚠️ Cliente no encontrado. Puedes ingresar el nombre manualmente.
+                            </p>
+                        )}
+                        {docStatus === 'found' && (
+                            <p style={{fontSize:'0.8rem', color:'var(--success, #22c55e)', marginTop:'6px'}}>
+                                ✓ Cliente encontrado automáticamente
+                            </p>
+                        )}
                     </div>
                     
                     <div style={{marginBottom: '16px'}}>
