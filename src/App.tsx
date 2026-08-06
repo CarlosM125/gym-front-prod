@@ -11,6 +11,7 @@ import ClientListScreen from './pages/ClientListScreen';
 import MembershipPOSScreen from './pages/MembershipPOSScreen';
 import AnalyticsScreen from './pages/AnalyticsScreen';
 import AdminSettingsScreen from './pages/AdminSettingsScreen';
+import WebAdminScreen from './pages/WebAdminScreen';
 
 const PrivateRoute = ({ children, roles }: { children: JSX.Element, roles?: string[] }) => {
     const { user, checkAuth } = useAuthStore();
@@ -52,6 +53,11 @@ function App() {
                 <Route path="admin" element={
                     <PrivateRoute roles={['ADMIN_TI', 'ADMIN_GYM']}>
                         <AdminSettingsScreen />
+                    </PrivateRoute>
+                } />
+                <Route path="admin/web" element={
+                    <PrivateRoute roles={['ADMIN_TI', 'ADMIN_GYM']}>
+                        <WebAdminScreen />
                     </PrivateRoute>
                 } />
             </Route>

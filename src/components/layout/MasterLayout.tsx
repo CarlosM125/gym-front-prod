@@ -56,6 +56,9 @@ export default function MasterLayout() {
                             <NavLink to="/admin" onClick={closeMobileMenu} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                                 <Settings size={20} /> Ajustes / Admin
                             </NavLink>
+                            <NavLink to="/admin/web" onClick={closeMobileMenu} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                                <Settings size={20} /> Administración Web
+                            </NavLink>
                         </>
                     )}
                 </nav>
