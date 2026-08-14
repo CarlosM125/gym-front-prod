@@ -3,76 +3,70 @@ import { useBranchStore } from '../store/branchStore';
 import { useMembershipStore } from '../store/membershipStore';
 import { useCustomerStore } from '../store/customerStore';
 import { useSearchParams } from 'react-router-dom';
-import { Search, CheckCircle, AlertCircle } from 'lucide-react';
-
-const MIN_DOC_LENGTH = 5; // mínimo de caracteres antes de buscar
+import { Search, CheckCircle } from 'lucide-react';
 
 export default function MembershipPOSScreen() {
     const { branches, fetchBranches } = useBranchStore();
     const { plans, fetchPlans, renewMembership, isLoading } = useMembershipStore();
-    const { fetchCustomerByDocId } = useCustomerStore();
-
+    const { customers, fetchCustomers } = useCustomerStore();
     const [searchParams] = useSearchParams();
 
+    const [searchQuery, setSearchQuery] = useState("");
+    const [showDropdown, setShowDropdown] = useState(false);
+    
     const [docId, setDocId] = useState("");
     const [branchId, setBranchId] = useState("");
     const [planId, setPlanId] = useState("");
     const [customerName, setCustomerName] = useState("");
     const [transactionDate, setTransactionDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [consentGiven, setConsentGiven] = useState(false);
-    const [docStatus, setDocStatus] = useState<'idle' | 'found' | 'not_found' | 'searching'>('idle');
 
     useEffect(() => { 
         fetchBranches();
         fetchPlans();
-    }, [fetchBranches, fetchPlans]);
+        fetchCustomers();
+    }, [fetchBranches, fetchPlans, fetchCustomers]);
 
     // Pre-fill doc from dashboard shortcut
     useEffect(() => {
         const doc = searchParams.get('doc');
         if (doc) {
+            setSearchQuery(doc);
             setDocId(doc);
-            if (doc.length >= MIN_DOC_LENGTH) {
-                setDocStatus('searching');
-                fetchCustomerByDocId(doc).then(customer => {
-                    if (customer) {
-                        setCustomerName(customer.fullName);
-                        if (customer.homeBranchId) setBranchId(customer.homeBranchId.toString());
-                        setDocStatus('found');
-                    } else {
-                        setDocStatus('not_found');
-                    }
-                });
+            // We rely on fetchCustomers to populate the customer list, then we can match it
+            const matchedCustomer = customers.find(c => c.documentId === doc);
+            if (matchedCustomer) {
+                setCustomerName(matchedCustomer.fullName);
+                setSearchQuery(`${matchedCustomer.documentId} - ${matchedCustomer.fullName}`);
+                if (matchedCustomer.homeBranchId) setBranchId(matchedCustomer.homeBranchId.toString());
             }
         }
-    }, [searchParams, fetchCustomerByDocId]);
+    }, [searchParams, customers]);
 
-    const handleDocIdBlur = async () => {
-        // Solo buscar si tiene el mínimo de caracteres requeridos
-        if (!docId || docId.trim().length < MIN_DOC_LENGTH) {
-            setDocStatus('idle');
-            return;
-        }
-        setDocStatus('searching');
-        const customer = await fetchCustomerByDocId(docId.trim());
-        if (customer) {
-            setCustomerName(customer.fullName);
-            if (customer.homeBranchId) {
-                setBranchId(customer.homeBranchId.toString());
-            }
-            setDocStatus('found');
-        } else {
-            setDocStatus('not_found');
-            // No limpiar nombre — puede ser un cliente nuevo
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value);
+        setShowDropdown(true);
+        // Reset selected customer if they start typing again
+        if (docId) {
+            setDocId("");
+            setCustomerName("");
         }
     };
 
-    const handleDocIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setDocId(e.target.value);
-        // Resetear estado al escribir para que no muestre encontrado/no encontrado mientras escribe
-        if (docStatus !== 'idle') setDocStatus('idle');
-        if (!e.target.value) setCustomerName('');
+    const selectCustomer = (c: any) => {
+        setDocId(c.documentId);
+        setCustomerName(c.fullName);
+        setSearchQuery(`${c.documentId} - ${c.fullName}`);
+        if (c.homeBranchId) setBranchId(c.homeBranchId.toString());
+        setShowDropdown(false);
     };
+
+    const filteredCustomers = searchQuery.length >= 2 && showDropdown
+        ? customers.filter(c => 
+            c.fullName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            c.documentId.includes(searchQuery)
+          ).slice(0, 10) // Limit to 10 results
+        : [];
 
     const handlePayment = async () => {
         if (!customerName || !docId || !branchId || !planId) return alert("Nombre, Cédula, Sucursal y Plan son obligatorios");
@@ -96,8 +90,8 @@ export default function MembershipPOSScreen() {
             setDocId(""); 
             setPlanId(""); 
             setCustomerName(""); 
+            setSearchQuery("");
             setBranchId("");
-            setDocStatus('idle');
             setTransactionDate(new Date().toISOString().split('T')[0]);
         }
     };
@@ -110,60 +104,93 @@ export default function MembershipPOSScreen() {
             <div className="grid-cols-2">
                 <div>
                     <h3 style={{marginBottom: '10px'}}>Datos del Cliente</h3>
-                    <div style={{marginBottom: '16px'}}>
-                        <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Documento *</label>
+                    
+                    <div style={{marginBottom: '16px', position: 'relative'}}>
+                        <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Buscar Cliente Existente (Nombre o Cédula)</label>
                         <div style={{position: 'relative'}}>
                             <Search size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
                             <input 
                                 className="form-input" 
-                                style={{
-                                    paddingLeft: '40px', 
-                                    paddingRight: '40px', 
-                                    margin: 0,
-                                    borderColor: docStatus === 'found' 
-                                        ? 'var(--success, #22c55e)' 
-                                        : docStatus === 'not_found' 
-                                        ? 'var(--warning, #f59e0b)' 
-                                        : undefined
-                                }}
-                                placeholder="Buscar por Documento" 
-                                value={docId} 
-                                onChange={handleDocIdChange}
-                                onBlur={handleDocIdBlur}
-                                required
+                                style={{ paddingLeft: '40px', margin: 0 }}
+                                placeholder="Ej. Juan Pérez o 17XXXXXXXX" 
+                                value={searchQuery} 
+                                onChange={handleSearchChange}
+                                onFocus={() => setShowDropdown(true)}
+                                onBlur={() => setTimeout(() => setShowDropdown(false), 200)} // delay to allow click
                             />
-                            {/* Ícono de estado */}
-                            {docStatus === 'found' && (
+                            {docId && (
                                 <CheckCircle size={18} style={{position:'absolute', right:'12px', top:'14px', color:'var(--success, #22c55e)'}} />
                             )}
-                            {docStatus === 'not_found' && (
-                                <AlertCircle size={18} style={{position:'absolute', right:'12px', top:'14px', color:'var(--warning, #f59e0b)'}} />
-                            )}
-                            {docStatus === 'searching' && (
-                                <span style={{position:'absolute', right:'14px', top:'14px', fontSize:'0.7rem', color:'var(--text-muted)'}}>•••</span>
-                            )}
                         </div>
-                        {docStatus === 'not_found' && (
-                            <p style={{fontSize:'0.8rem', color:'var(--warning, #f59e0b)', marginTop:'6px'}}>
-                                ⚠️ Cliente no encontrado. Puedes ingresar el nombre manualmente.
-                            </p>
+                        
+                        {showDropdown && filteredCustomers.length > 0 && (
+                            <ul style={{
+                                position: 'absolute', top: '100%', left: 0, right: 0, 
+                                backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', 
+                                borderRadius: '4px', zIndex: 10, maxHeight: '250px', overflowY: 'auto',
+                                listStyle: 'none', padding: 0, margin: '4px 0 0 0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.5)'
+                            }}>
+                                {filteredCustomers.map(c => (
+                                    <li 
+                                        key={c.id} 
+                                        onClick={() => selectCustomer(c)}
+                                        style={{padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between'}}
+                                        onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
+                                        onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                    >
+                                        <div>
+                                            <div style={{fontWeight: 500}}>{c.fullName}</div>
+                                            <div style={{fontSize: '0.85rem', color: 'var(--text-muted)'}}>Cédula: {c.documentId}</div>
+                                        </div>
+                                        {c.currentPlanName && (
+                                            <div style={{fontSize: '0.8rem', color: 'var(--primary)', textAlign: 'right'}}>
+                                                {c.currentPlanName}<br/>
+                                                <span style={{color: 'var(--text-muted)'}}>{c.membershipStatus}</span>
+                                            </div>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
                         )}
-                        {docStatus === 'found' && (
-                            <p style={{fontSize:'0.8rem', color:'var(--success, #22c55e)', marginTop:'6px'}}>
-                                ✓ Cliente encontrado automáticamente
-                            </p>
+                        {showDropdown && searchQuery.length >= 2 && filteredCustomers.length === 0 && (
+                            <div style={{
+                                position: 'absolute', top: '100%', left: 0, right: 0, 
+                                backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', 
+                                padding: '12px 16px', zIndex: 10, borderRadius: '4px', marginTop: '4px',
+                                color: 'var(--warning, #f59e0b)', fontSize: '0.9rem'
+                            }}>
+                                No se encontraron clientes. Ingresa los datos manualmente abajo para crear uno nuevo.
+                            </div>
                         )}
                     </div>
                     
-                    <div style={{marginBottom: '16px'}}>
-                        <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Nombre Completo *</label>
-                        <input 
-                            className="form-input" 
-                            placeholder="Nombre del cliente" 
-                            value={customerName} 
-                            onChange={e=>setCustomerName(e.target.value)} 
-                            required
-                        />
+                    <div style={{display: 'flex', gap: '16px', marginBottom: '16px'}}>
+                        <div style={{flex: 1}}>
+                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Documento *</label>
+                            <input 
+                                className="form-input" 
+                                placeholder="Número de documento" 
+                                value={docId} 
+                                onChange={e => {
+                                    setDocId(e.target.value);
+                                    if(searchQuery) setSearchQuery(''); // Clear search if manually editing
+                                }} 
+                                required
+                            />
+                        </div>
+                        <div style={{flex: 1}}>
+                            <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Nombre Completo *</label>
+                            <input 
+                                className="form-input" 
+                                placeholder="Nombre del cliente" 
+                                value={customerName} 
+                                onChange={e => {
+                                    setCustomerName(e.target.value);
+                                    if(searchQuery) setSearchQuery(''); // Clear search if manually editing
+                                }} 
+                                required
+                            />
+                        </div>
                     </div>
                 </div>
 
