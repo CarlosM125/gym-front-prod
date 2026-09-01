@@ -87,8 +87,8 @@ export default function AdminSettingsScreen() {
             setNewPlanDescription('');
             setNewPlanIsPromo(false);
             fetchPlans();
-        } catch (e) {
-            alert("Error al crear el plan.");
+        } catch (e: any) {
+            alert("Error al crear el plan: " + (e.response?.data?.message || e.message));
         }
     };
 
