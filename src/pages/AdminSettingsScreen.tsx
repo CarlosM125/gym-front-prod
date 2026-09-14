@@ -150,12 +150,12 @@ export default function AdminSettingsScreen() {
                                     {plans.map(p => (
                                         <tr key={p.id}>
                                             <td>
-                                                <div style={{fontWeight: '500', opacity: p.isActive ? 1 : 0.5, textDecoration: p.isActive ? 'none' : 'line-through'}}>{p.name}</div>
+                                                <div style={{fontWeight: '500', opacity: p.isActive !== false ? 1 : 0.5, textDecoration: p.isActive !== false ? 'none' : 'line-through'}}>{p.name}</div>
                                                 <span className={`badge ${p.isPromotion ? 'danger' : 'dark'}`} style={{marginTop: '4px'}}>
                                                     {p.isPromotion ? 'Promoción' : 'Estándar'}
                                                 </span>
                                             </td>
-                                            <td style={{opacity: p.isActive ? 1 : 0.5}}>
+                                            <td style={{opacity: p.isActive !== false ? 1 : 0.5}}>
                                                 <div>{p.durationMonths} {p.durationMonths === 1 ? 'mes' : 'meses'}</div>
                                                 <div style={{color: 'green', fontWeight: 'bold'}}>${p.priceAmount}</div>
                                             </td>
@@ -170,12 +170,12 @@ export default function AdminSettingsScreen() {
                                                             durationMonths: p.durationMonths,
                                                             description: p.description,
                                                             isPromotion: p.isPromotion,
-                                                            isActive: !p.isActive
+                                                            isActive: p.isActive === false ? true : false
                                                         });
                                                         if (success) fetchPlans();
                                                     }}
                                                 >
-                                                    {p.isActive ? 'Desactivar' : 'Activar'}
+                                                    {p.isActive !== false ? 'Desactivar' : 'Activar'}
                                                 </button>
                                             </td>
                                         </tr>
