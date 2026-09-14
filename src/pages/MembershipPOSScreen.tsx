@@ -219,7 +219,7 @@ export default function MembershipPOSScreen() {
                             <label style={{display:'block', marginBottom:'8px', fontWeight:'500'}}>Plan de Membresía *</label>
                             <select className="form-input" value={planId} onChange={e=>setPlanId(e.target.value)}>
                                 <option value="">Seleccione un Plan</option>
-                                {plans.map(p => (
+                                {plans.filter(p => p.isActive).map(p => (
                                     <option key={p.id} value={p.id}>
                                         {p.name} - ${p.priceAmount} ({p.durationMonths} {p.durationMonths === 1 ? 'mes' : 'meses'})
                                     </option>

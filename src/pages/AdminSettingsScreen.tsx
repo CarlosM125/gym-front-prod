@@ -143,20 +143,40 @@ export default function AdminSettingsScreen() {
                                     <tr>
                                         <th>Nombre del Plan</th>
                                         <th>Duración / Precio</th>
+                                        <th>Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {plans.map(p => (
                                         <tr key={p.id}>
                                             <td>
-                                                <div style={{fontWeight: '500'}}>{p.name}</div>
+                                                <div style={{fontWeight: '500', opacity: p.isActive ? 1 : 0.5, textDecoration: p.isActive ? 'none' : 'line-through'}}>{p.name}</div>
                                                 <span className={`badge ${p.isPromotion ? 'danger' : 'dark'}`} style={{marginTop: '4px'}}>
                                                     {p.isPromotion ? 'Promoción' : 'Estándar'}
                                                 </span>
                                             </td>
-                                            <td>
+                                            <td style={{opacity: p.isActive ? 1 : 0.5}}>
                                                 <div>{p.durationMonths} {p.durationMonths === 1 ? 'mes' : 'meses'}</div>
                                                 <div style={{color: 'green', fontWeight: 'bold'}}>${p.priceAmount}</div>
+                                            </td>
+                                            <td>
+                                                <button 
+                                                    className="btn-outline" 
+                                                    style={{padding: '4px 8px', fontSize: '0.8rem'}}
+                                                    onClick={async () => {
+                                                        const success = await useMembershipStore.getState().updatePlan(p.id, {
+                                                            name: p.name,
+                                                            priceAmount: p.priceAmount,
+                                                            durationMonths: p.durationMonths,
+                                                            description: p.description,
+                                                            isPromotion: p.isPromotion,
+                                                            isActive: !p.isActive
+                                                        });
+                                                        if (success) fetchPlans();
+                                                    }}
+                                                >
+                                                    {p.isActive ? 'Desactivar' : 'Activar'}
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

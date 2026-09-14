@@ -35,6 +35,7 @@ export interface MembershipPlan {
     priceAmount: number;
     durationMonths: number;
     isPromotion: boolean;
+    isActive: boolean;
 }
 
 export interface PlanDistribution {
@@ -84,6 +85,7 @@ interface MembershipState {
     isLoading: boolean;
     error: string | null;
     fetchPlans: () => Promise<void>;
+    updatePlan: (id: number, payload: Partial<MembershipPlan>) => Promise<boolean>;
     fetchExpiringToday: () => Promise<void>;
     fetchExpiring: (fromDate: string, toDate: string) => Promise<void>;
     fetchHistoricalStats: (year: number) => Promise<void>;
@@ -107,6 +109,26 @@ export const useMembershipStore = create<MembershipState>((set) => ({
             const res = await apiClient.get<ApiResponse<MembershipPlan[]>>('/memberships/plans');
             if (res.data.success) set({ plans: res.data.data, isLoading: false });
         } catch (e: any) { set({ error: e.message, isLoading: false }); }
+    },
+
+    updatePlan: async (id: number, payload: Partial<MembershipPlan>) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await apiClient.put<ApiResponse<MembershipPlan>>(`/memberships/plans/${id}`, payload);
+            if (response.data.success) {
+                set((state) => ({
+                    plans: state.plans.map(p => p.id === id ? response.data.data : p),
+                    isLoading: false
+                }));
+                return true;
+            } else {
+                set({ error: response.data.message, isLoading: false });
+                return false;
+            }
+        } catch (error: any) {
+            set({ error: error.message, isLoading: false });
+            return false;
+        }
     },
 
     fetchExpiringToday: async () => {
