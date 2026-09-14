@@ -20,6 +20,7 @@ export default function ClientRegistryScreen() {
     const [docId, setDocId] = useState("");
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
+    const [birthDate, setBirthDate] = useState("");
     const [branchId, setBranchId] = useState("");
     const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
     const [transactionDate, setTransactionDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -70,7 +71,8 @@ export default function ClientRegistryScreen() {
         const customer = await registerCustomer({
             documentId: docId || undefined, 
             fullName, 
-            email: email || undefined, 
+            email: email || undefined,
+            birthDate: birthDate || undefined,
             homeBranchId: branchId ? Number(branchId) : undefined,
             profileImageUrl: finalImageUrl || undefined,
             consentGiven
@@ -132,6 +134,12 @@ export default function ClientRegistryScreen() {
                     <div style={{position: 'relative', marginBottom: '16px'}}>
                         <Mail size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
                         <input className="form-input" style={{paddingLeft: '40px', margin:0}} placeholder="Email (Opcional)" value={email} onChange={e=>setEmail(e.target.value)} />
+                    </div>
+
+                    <div style={{position: 'relative', marginBottom: '16px'}}>
+                        <Calendar size={18} style={{position:'absolute', left:'12px', top:'14px', color:'var(--text-muted)'}}/>
+                        <input className="form-input" type="date" style={{paddingLeft: '40px', margin:0}} title="Fecha de Nacimiento" value={birthDate} onChange={e=>setBirthDate(e.target.value)} />
+                        {!birthDate && <span style={{position:'absolute', left:'40px', top:'13px', color:'var(--text-muted)', pointerEvents:'none'}}>Fecha de Nac. (Opcional)</span>}
                     </div>
 
                     <select className="form-input" value={branchId} onChange={e=>setBranchId(e.target.value)} required>

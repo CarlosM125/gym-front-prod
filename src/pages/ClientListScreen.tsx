@@ -6,15 +6,19 @@ import { apiClient } from '../api/client';
 import { compressImage } from '../utils/imageCompressor';
 
 export default function ClientListScreen() {
-    const { customers, fetchCustomers, isLoading, updateCustomer } = useCustomerStore();
+    const { pagedCustomers, fetchCustomersPaged, isLoading, updateCustomer } = useCustomerStore();
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState<'ALL' | 'ACTIVE' | 'EXPIRED' | 'EXPIRING_TODAY'>('ALL');
+    const [page, setPage] = useState(0);
+    const size = 10;
 
     // Edit Modal State
     const [editingCustomer, setEditingCustomer] = useState<any>(null);
     const [editName, setEditName] = useState('');
     const [editDoc, setEditDoc] = useState('');
     const [editEmail, setEditEmail] = useState('');
+    const [editBirthDate, setEditBirthDate] = useState('');
     const [editStartDate, setEditStartDate] = useState('');
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -29,42 +33,23 @@ export default function ClientListScreen() {
     const { updateMembershipStartDate, fetchCustomerHistory } = useMembershipStore();
 
     useEffect(() => {
-        fetchCustomers();
-    }, [fetchCustomers]);
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+            setPage(0); // reset page on search change
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
-    const filteredCustomers = customers
-        .filter(c => c != null)  // guard against null/undefined entries from API
-        .filter(c => {
-            const matchesSearch = (c.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                  (c.email || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                  (c.documentId || '').includes(searchTerm);
-            
-            if (!matchesSearch) return false;
-
-            const today = new Date().toISOString().split('T')[0];
-
-            switch (filterStatus) {
-                case 'ACTIVE': return c.membershipStatus === 'ACTIVE';
-                case 'EXPIRED': return c.membershipStatus === 'EXPIRED' || !c.membershipStatus;
-                case 'EXPIRING_TODAY': return c.currentEndDate === today;
-                default: return true;
-            }
-        })
-        .sort((a, b) => {
-            if (filterStatus === 'EXPIRED') {
-                if (!a.currentEndDate && !b.currentEndDate) return 0;
-                if (!a.currentEndDate) return 1;
-                if (!b.currentEndDate) return -1;
-                return new Date(b.currentEndDate).getTime() - new Date(a.currentEndDate).getTime();
-            }
-            return 0;
-        });
+    useEffect(() => {
+        fetchCustomersPaged(page, size, debouncedSearch, filterStatus);
+    }, [fetchCustomersPaged, page, size, debouncedSearch, filterStatus]);
 
     const handleEditClick = (c: any) => {
         setEditingCustomer(c);
         setEditName(c.fullName);
         setEditDoc(c.documentId);
         setEditEmail(c.email || '');
+        setEditBirthDate(c.birthDate || '');
         setEditStartDate(c.currentStartDate || '');
         setImagePreview(c.profileImageUrl || null);
         setSelectedImage(null);
@@ -104,7 +89,8 @@ export default function ClientListScreen() {
         const hasDataChanged = 
             editName !== editingCustomer.fullName ||
             editDoc !== editingCustomer.documentId ||
-            editEmail !== (editingCustomer.email || '');
+            editEmail !== (editingCustomer.email || '') ||
+            editBirthDate !== (editingCustomer.birthDate || '');
             
         const hasDateChanged = editStartDate !== (editingCustomer.currentStartDate || '');
         const hasImageChanged = selectedImage !== null;
@@ -142,6 +128,7 @@ export default function ClientListScreen() {
                 fullName: editName,
                 documentId: editDoc,
                 email: editEmail,
+                birthDate: editBirthDate || undefined,
                 profileImageUrl: finalImageUrl || undefined
             });
         }
@@ -156,7 +143,7 @@ export default function ClientListScreen() {
         if (customerUpdated && dateUpdated) {
             setEditingCustomer(null);
             alert("Actualizado exitosamente");
-            fetchCustomers(); // Refresh to get recalculated end dates
+            fetchCustomersPaged(page, size, debouncedSearch, filterStatus); // Refresh
         } else {
             alert("Hubo un problema al actualizar algunos datos.");
         }
@@ -171,7 +158,7 @@ export default function ClientListScreen() {
                 if (res.data.success) {
                     alert("Cliente eliminado exitosamente según la LOPDP.");
                     setEditingCustomer(null);
-                    fetchCustomers();
+                    fetchCustomersPaged(page, size, debouncedSearch, filterStatus);
                 }
             } catch (e) {
                 console.error(e);
@@ -181,10 +168,12 @@ export default function ClientListScreen() {
         }
     };
 
+    const displayedCustomers = pagedCustomers?.content || [];
+
     return (
         <div>
             <h1 className="page-title">Todos los Clientes</h1>
-            <p className="page-subtitle">{customers.length} clientes registrados</p>
+            <p className="page-subtitle">{pagedCustomers?.totalElements || 0} clientes registrados</p>
 
             <div className="flex-between" style={{marginBottom: '20px', flexWrap: 'wrap', gap: '1rem'}}>
                 <div style={{position: 'relative', flex: 1, minWidth: '300px'}}>
@@ -192,21 +181,21 @@ export default function ClientListScreen() {
                     <input 
                         className="form-input" 
                         style={{paddingLeft: '40px', margin:0}}
-                        placeholder="Buscar por nombre o email..." 
+                        placeholder="Buscar por nombre, cédula o email..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
                 
                 <div style={{display: 'flex', gap: '8px', overflowX: 'auto'}}>
-                    <button className={filterStatus === 'ALL' ? 'btn-primary' : 'btn-outline'} style={filterStatus === 'ALL' ? {backgroundColor: '#000'} : {}} onClick={() => setFilterStatus('ALL')}>Todas</button>
-                    <button className={filterStatus === 'ACTIVE' ? 'btn-primary' : 'btn-outline'} onClick={() => setFilterStatus('ACTIVE')}>Activas</button>
-                    <button className={filterStatus === 'EXPIRING_TODAY' ? 'btn-primary' : 'btn-outline'} onClick={() => setFilterStatus('EXPIRING_TODAY')}>Vencen Hoy</button>
-                    <button className={filterStatus === 'EXPIRED' ? 'btn-primary' : 'btn-outline'} onClick={() => setFilterStatus('EXPIRED')}>Vencidas</button>
+                    <button className={filterStatus === 'ALL' ? 'btn-primary' : 'btn-outline'} style={filterStatus === 'ALL' ? {backgroundColor: '#000'} : {}} onClick={() => {setFilterStatus('ALL'); setPage(0);}}>Todas</button>
+                    <button className={filterStatus === 'ACTIVE' ? 'btn-primary' : 'btn-outline'} onClick={() => {setFilterStatus('ACTIVE'); setPage(0);}}>Activas</button>
+                    <button className={filterStatus === 'EXPIRING_TODAY' ? 'btn-primary' : 'btn-outline'} onClick={() => {setFilterStatus('EXPIRING_TODAY'); setPage(0);}}>Vencen Hoy</button>
+                    <button className={filterStatus === 'EXPIRED' ? 'btn-primary' : 'btn-outline'} onClick={() => {setFilterStatus('EXPIRED'); setPage(0);}}>Vencidas</button>
                 </div>
             </div>
             
-            {isLoading ? <p>Cargando red...</p> : (
+            {isLoading ? <p>Cargando clientes...</p> : (
                 <div className="table-container">
                     <table className="table">
                         <thead>
@@ -214,6 +203,7 @@ export default function ClientListScreen() {
                                 <th>Foto</th>
                                 <th>Nombre</th>
                                 <th>Cédula</th>
+                                <th>Nacimiento</th>
                                 <th>Membresía</th>
                                 <th>F. Inicio</th>
                                 <th>F. Caduca</th>
@@ -222,12 +212,12 @@ export default function ClientListScreen() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredCustomers.length === 0 ? (
+                            {displayedCustomers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} style={{textAlign: 'center'}} className="text-muted">No se encontraron clientes</td>
+                                    <td colSpan={9} style={{textAlign: 'center'}} className="text-muted">No se encontraron clientes</td>
                                 </tr>
                             ) : (
-                                filteredCustomers.map(c => (
+                                displayedCustomers.map(c => (
                                     <tr key={c.id}>
                                         <td>
                                             <img 
@@ -240,6 +230,7 @@ export default function ClientListScreen() {
                                         </td>
                                         <td style={{fontWeight: '500'}}>{c?.fullName || '—'}</td>
                                         <td className="text-muted">{c?.documentId || '—'}</td>
+                                        <td className="text-muted">{c?.birthDate || '—'}</td>
                                         <td><span className="badge dark">{c?.currentPlanName || 'Ninguna'}</span></td>
                                         <td className="text-muted">{c?.currentStartDate || '—'}</td>
                                         <td className="text-muted">{c?.currentEndDate || '—'}</td>
@@ -261,6 +252,28 @@ export default function ClientListScreen() {
                             )}
                         </tbody>
                     </table>
+
+                    {pagedCustomers && pagedCustomers.totalPages > 1 && (
+                        <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '20px'}}>
+                            <button 
+                                className="btn-outline" 
+                                disabled={page === 0} 
+                                onClick={() => setPage(page - 1)}
+                            >
+                                Anterior
+                            </button>
+                            <span style={{fontSize: '0.9rem', color: 'var(--text-muted)'}}>
+                                Página {page + 1} de {pagedCustomers.totalPages}
+                            </span>
+                            <button 
+                                className="btn-outline" 
+                                disabled={page >= pagedCustomers.totalPages - 1} 
+                                onClick={() => setPage(page + 1)}
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -299,6 +312,9 @@ export default function ClientListScreen() {
                         
                         <label style={{display: 'block', marginBottom: '4px', fontSize: '0.9rem'}}>Email (Opcional)</label>
                         <input className="form-input" value={editEmail} onChange={e=>setEditEmail(e.target.value)} disabled={isSaving} />
+
+                        <label style={{display: 'block', marginBottom: '4px', fontSize: '0.9rem'}}>Fecha de Nacimiento (Opcional)</label>
+                        <input type="date" className="form-input" value={editBirthDate} onChange={e=>setEditBirthDate(e.target.value)} disabled={isSaving} />
 
                         {editingCustomer.membershipStatus === 'ACTIVE' && (
                             <>

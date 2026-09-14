@@ -8,6 +8,7 @@ export interface Customer {
     documentId: string;
     email: string;
     phone?: string;
+    birthDate?: string;
     pinZkteco: number;
     profileImageUrl?: string;
     status: string;
@@ -21,18 +22,29 @@ export interface Customer {
     consentGiven?: boolean;
 }
 
+export interface PageData<T> {
+    content: T[];
+    totalElements: number;
+    totalPages: number;
+    size: number;
+    number: number;
+}
+
 interface CustomerState {
     customers: Customer[];
+    pagedCustomers: PageData<Customer> | null;
     isLoading: boolean;
     error: string | null;
     registerCustomer: (data: Partial<Customer>) => Promise<Customer | null>;
     fetchCustomers: () => Promise<void>;
+    fetchCustomersPaged: (page: number, size: number, search?: string, filterStatus?: string) => Promise<void>;
     fetchCustomerByDocId: (docId: string) => Promise<Customer | null>;
     updateCustomer: (id: number, data: Partial<Customer>) => Promise<boolean>;
 }
 
 export const useCustomerStore = create<CustomerState>((set, get) => ({
     customers: [],
+    pagedCustomers: null,
     isLoading: false,
     error: null,
 
@@ -47,6 +59,27 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
             }
         } catch (error: any) {
             set({ error: error.response?.data?.message || 'Error fetching customers', isLoading: false });
+        }
+    },
+
+    fetchCustomersPaged: async (page: number, size: number, search?: string, filterStatus?: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            const params = new URLSearchParams({
+                page: page.toString(),
+                size: size.toString(),
+            });
+            if (search) params.append('search', search);
+            if (filterStatus) params.append('filterStatus', filterStatus);
+
+            const response = await apiClient.get<ApiResponse<PageData<Customer>>>(`/customers/paged?${params.toString()}`);
+            if (response.data.success) {
+                set({ pagedCustomers: response.data.data, isLoading: false });
+            } else {
+                set({ error: response.data.message, isLoading: false });
+            }
+        } catch (error: any) {
+            set({ error: error.response?.data?.message || 'Error fetching paginated customers', isLoading: false });
         }
     },
 
